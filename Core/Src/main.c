@@ -26,6 +26,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "bsp_key.h"
+#include "bsp_adc.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -105,6 +106,7 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 		Key_process();
+		adc_process();
   }
   /* USER CODE END 3 */
 }
