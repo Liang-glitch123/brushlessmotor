@@ -1,99 +1,121 @@
 #include "bsp_adc.h"
 #include <math.h>
 
-ADC_HandleTypeDef ADC_Handle;
+extern ADC_HandleTypeDef hadc1;
 
-static int16_t adc_buff[ADC_NUM_MAX];    // µçÑ¹²É¼¯»º³åÇø
-static int16_t vbus_adc_mean = 0;        // µçÔ´µçÑ¹ ACD ²ÉÑù½á¹ûÆ½¾ùÖµ
-static uint32_t adc_mean_t = 0;        // Æ½¾ùÖµÀÛ¼Ó
-static uint32_t adc_mean_sum_u = 0;        // Æ½¾ùÖµÀÛ¼Ó
-static uint32_t adc_mean_sum_v = 0;        // Æ½¾ùÖµÀÛ¼Ó
-static uint32_t adc_mean_sum_w = 0;        // Æ½¾ùÖµÀÛ¼Ó
-static uint32_t adc_mean_count_u = 0;      // ÀÛ¼Ó¼ÆÊı
-static uint32_t adc_mean_count_v = 0;      // ÀÛ¼Ó¼ÆÊı
-static uint32_t adc_mean_count_w = 0;      // ÀÛ¼Ó¼ÆÊı
+static int16_t adc_buff[ADC_NUM_MAX];    // ç”µå‹é‡‡é›†ç¼“å†²åŒº
+int16_t vbus_adc_mean = 0;        // ç”µæºç”µå‹ ACD é‡‡æ ·ç»“æœå¹³å‡å€¼
+int16_t emf_u_adc_mean = 0;
+int16_t emf_v_adc_mean = 0;
+int16_t emf_w_adc_mean = 0;
+uint32_t adc_mean_t = 0;        // å¹³å‡å€¼ç´¯åŠ 
+uint32_t adc_mean_sum_u = 0;        // å¹³å‡å€¼ç´¯åŠ 
+uint32_t adc_mean_sum_v = 0;        // å¹³å‡å€¼ç´¯åŠ 
+uint32_t adc_mean_sum_w = 0;        // å¹³å‡å€¼ç´¯åŠ 
+static uint32_t adc_mean_count_u = 0;      // ç´¯åŠ è®¡æ•°
+static uint32_t adc_mean_count_v = 0;      // ç´¯åŠ è®¡æ•°
+static uint32_t adc_mean_count_w = 0;      // ç´¯åŠ è®¡æ•°
 
 /**
-  * @brief  ³£¹æ×ª»»ÔÚ·Ç×èÈûÄ£Ê½ÏÂÍê³É»Øµ÷
-  * @param  hadc: ADC  ¾ä±ú.
-  * @retval ÎŞ
+  * @brief  å¸¸è§„è½¬æ¢åœ¨éé˜»å¡æ¨¡å¼ä¸‹å®Œæˆå›è°ƒ
+  * @param  hadc: ADC  å¥æŸ„.
+  * @retval æ— 
   */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
 
 	int32_t adc_mean = 0;
-  HAL_ADC_Stop_DMA(hadc);       // Í£Ö¹ ADC ²ÉÑù£¬´¦ÀíÍêÒ»´ÎÊı¾İÔÚ¼ÌĞø²ÉÑù
+  HAL_ADC_Stop_DMA(hadc);       // åœæ­¢ ADC é‡‡æ ·ï¼Œå¤„ç†å®Œä¸€æ¬¡æ•°æ®åœ¨ç»§ç»­é‡‡æ ·
   
-  /* ¼ÆËãÎÂ¶ÈÍ¨µÀ²ÉÑùµÄÆ½¾ùÖµ */
-  for(uint32_t count = 0; count < ADC_NUM_MAX; count+=5)
+  /* è®¡ç®—æ¸©åº¦é€šé“é‡‡æ ·çš„å¹³å‡å€¼ */
+  for(uint32_t count = 4; count < ADC_NUM_MAX; count+=8)
   {
     adc_mean += (int32_t)adc_buff[count];
   }
-	  adc_mean_t = adc_mean / (ADC_NUM_MAX / 5);    // ±£´æÆ½¾ùÖµ
+	  adc_mean_t = adc_mean / (ADC_NUM_MAX / 8);    // ä¿å­˜å¹³å‡å€¼
 		adc_mean = 0;
 
   
-  /* ¼ÆËãµçÑ¹Í¨µÀ²ÉÑùµÄÆ½¾ùÖµ */
-  for(uint32_t count = 1; count < ADC_NUM_MAX; count+=5)
+  /* è®¡ç®—ç”µå‹é€šé“é‡‡æ ·çš„å¹³å‡å€¼ */
+  for(uint32_t count = 3; count < ADC_NUM_MAX; count+=8)
   {
     adc_mean += (int32_t)adc_buff[count];
   }
   
-  vbus_adc_mean = adc_mean / (ADC_NUM_MAX / 5);    // ±£´æÆ½¾ùÖµ
-	  adc_mean = 0;
+  vbus_adc_mean = adc_mean / (ADC_NUM_MAX / 8);    // ä¿å­˜å¹³å‡å€¼
+  adc_mean = 0;
+
+  /* ADC_IN10/IN12/IN13ï¼šMotor1_EMFU/EMFV/EMFW */
+  for(uint32_t count = 5; count < ADC_NUM_MAX; count += 8)
+    adc_mean += (int32_t)adc_buff[count];
+  emf_u_adc_mean = adc_mean / (ADC_NUM_MAX / 8);
+  adc_mean = 0;
+  for(uint32_t count = 6; count < ADC_NUM_MAX; count += 8)
+    adc_mean += (int32_t)adc_buff[count];
+  emf_v_adc_mean = adc_mean / (ADC_NUM_MAX / 8);
+  adc_mean = 0;
+  for(uint32_t count = 7; count < ADC_NUM_MAX; count += 8)
+    adc_mean += (int32_t)adc_buff[count];
+  emf_w_adc_mean = adc_mean / (ADC_NUM_MAX / 8);
+  adc_mean = 0;
 #if 1 
-		  /* ¼ÆËãµçÁ÷Í¨µÀ²ÉÑùµÄÆ½¾ùÖµ */
-   for(uint32_t count = 2; count < ADC_NUM_MAX; count+=5)
+		  /* è®¡ç®—ç”µæµé€šé“é‡‡æ ·çš„å¹³å‡å€¼ */
+   for(uint32_t count = 0; count < ADC_NUM_MAX; count+=8)
   {
     adc_mean += (uint32_t)adc_buff[count];
   }
   
-  adc_mean_sum_u += adc_mean / (ADC_NUM_MAX / 5);    // ÀÛ¼ÓµçÑ¹
+  adc_mean_sum_u += adc_mean / (ADC_NUM_MAX / 8);    // ç´¯åŠ ç”µå‹
   adc_mean_count_u++;
 	  adc_mean = 0;
-			  /* ¼ÆËãµçÁ÷Í¨µÀ²ÉÑùµÄÆ½¾ùÖµ */
-   for(uint32_t count = 3; count < ADC_NUM_MAX; count+=5)
+			  /* è®¡ç®—ç”µæµé€šé“é‡‡æ ·çš„å¹³å‡å€¼ */
+   for(uint32_t count = 1; count < ADC_NUM_MAX; count+=8)
   {
     adc_mean += (uint32_t)adc_buff[count];
   }
   
-  adc_mean_sum_v += adc_mean / (ADC_NUM_MAX / 5);    // ÀÛ¼ÓµçÑ¹
+  adc_mean_sum_v += adc_mean / (ADC_NUM_MAX / 8);    // ç´¯åŠ ç”µå‹
   adc_mean_count_v++;
 		adc_mean = 0;
-			  /* ¼ÆËãµçÁ÷Í¨µÀ²ÉÑùµÄÆ½¾ùÖµ */
-   for(uint32_t count = 4; count < ADC_NUM_MAX; count+=5)
+			  /* è®¡ç®—ç”µæµé€šé“é‡‡æ ·çš„å¹³å‡å€¼ */
+   for(uint32_t count = 2; count < ADC_NUM_MAX; count+=8)
   {
     adc_mean += (uint32_t)adc_buff[count];
   }
   
-  adc_mean_sum_w += adc_mean / (ADC_NUM_MAX / 5);    // ÀÛ¼ÓµçÑ¹
+  adc_mean_sum_w += adc_mean / (ADC_NUM_MAX / 8);    // ç´¯åŠ ç”µå‹
   adc_mean_count_w++;
 	adc_mean = 0;
 #else
 	  vbus_adc_mean = adc_buff[1];
-	      /* ¼ÆËãµçÁ÷Í¨µÀ²ÉÑùµÄÆ½¾ùÖµ */
+	      /* è®¡ç®—ç”µæµé€šé“é‡‡æ ·çš„å¹³å‡å€¼ */
   
 #endif
   
-  HAL_ADC_Start_DMA(&ADC_Handle, (uint32_t*)&adc_buff, ADC_NUM_MAX);    // ¿ªÊ¼ ADC ²ÉÑù
+  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_buff, ADC_NUM_MAX);
+}
+
+void ADC_Init(void)
+{
+  HAL_ADC_Start_DMA(&hadc1, (uint32_t *)adc_buff, ADC_NUM_MAX);
 }
 
 /**
-  * @brief  »ñÈ¡ÎÂ¶È´«¸ĞÆ÷¶ËµÄµçÑ¹Öµ
-  * @param  ÎŞ
-  * @retval ×ª»»µÃµ½µÄµçÑ¹Öµ
+  * @brief  è·å–æ¸©åº¦ä¼ æ„Ÿå™¨ç«¯çš„ç”µå‹å€¼
+  * @param  æ— 
+  * @retval è½¬æ¢å¾—åˆ°çš„ç”µå‹å€¼
   */
 float get_ntc_v_val(void)
 {
-  float vdc = GET_ADC_VDC_VAL(adc_mean_t);      // »ñÈ¡µçÑ¹Öµ
+  float vdc = GET_ADC_VDC_VAL(adc_mean_t);      // è·å–ç”µå‹å€¼
   
   return vdc;
 }
 
 /**
-  * @brief  »ñÈ¡ÎÂ¶È´«¸ĞÆ÷¶ËµÄµç×èÖµ
-  * @param  ÎŞ
-  * @retval ×ª»»µÃµ½µÄµç×èÖµ
+  * @brief  è·å–æ¸©åº¦ä¼ æ„Ÿå™¨ç«¯çš„ç”µé˜»å€¼
+  * @param  æ— 
+  * @retval è½¬æ¢å¾—åˆ°çš„ç”µé˜»å€¼
   */
 float get_ntc_r_val(void)
 {
@@ -106,38 +128,38 @@ float get_ntc_r_val(void)
 }
 
 /**
-  * @brief  »ñÈ¡ÎÂ¶È´«¸ĞÆ÷µÄÎÂ¶È
-  * @param  ÎŞ
-  * @retval ×ª»»µÃµ½µÄÎÂ¶È£¬µ¥Î»£º£¨¡æ£©
+  * @brief  è·å–æ¸©åº¦ä¼ æ„Ÿå™¨çš„æ¸©åº¦
+  * @param  æ— 
+  * @retval è½¬æ¢å¾—åˆ°çš„æ¸©åº¦ï¼Œå•ä½ï¼šï¼ˆâ„ƒï¼‰
   */
 float get_ntc_t_val(void)
 {
-  float t = 0;             // ²âÁ¿ÎÂ¶È
-  float Rt = 0;            // ²âÁ¿µç×è
-  float Ka = 273.15;       // 0¡æ Ê±¶ÔÓ¦µÄÎÂ¶È£¨¿ª¶ûÎÄ£©
-  float R25 = 10000.0;     // 25¡æ µç×èÖµ
-  float T25 = Ka + 25;     // 25¡æ Ê±¶ÔÓ¦µÄÎÂ¶È£¨¿ª¶ûÎÄ£©
-  float B = 3950.0;        /* B-³£Êı£ºB = ln(R25 / Rt) / (1 / T ¨C 1 / T25)£¬
-                             ÆäÖĞ T = 25 + 273.15 */
+  float t = 0;             // æµ‹é‡æ¸©åº¦
+  float Rt = 0;            // æµ‹é‡ç”µé˜»
+  float Ka = 273.15;       // 0â„ƒ æ—¶å¯¹åº”çš„æ¸©åº¦ï¼ˆå¼€å°”æ–‡ï¼‰
+  float R25 = 10000.0;     // 25â„ƒ ç”µé˜»å€¼
+  float T25 = Ka + 25;     // 25â„ƒ æ—¶å¯¹åº”çš„æ¸©åº¦ï¼ˆå¼€å°”æ–‡ï¼‰
+  float B = 3950.0;        /* B-å¸¸æ•°ï¼šB = ln(R25 / Rt) / (1 / T â€“ 1 / T25)ï¼Œ
+                             å…¶ä¸­ T = 25 + 273.15 */
 
-  Rt = get_ntc_r_val();    // »ñÈ¡µ±Ç°µç×èÖµ
+  Rt = get_ntc_r_val();    // è·å–å½“å‰ç”µé˜»å€¼
 
-  t = B * T25 / (B + log(Rt / R25) * T25) - Ka ;    // Ê¹ÓÃ¹«Ê½¼ÆËã
+  t = B * T25 / (B + log(Rt / R25) * T25) - Ka ;    // ä½¿ç”¨å…¬å¼è®¡ç®—
 
   return t;
 }
 /**
-  * @brief  »ñÈ¡VÏàµÄµçÁ÷Öµ
-  * @param  ÎŞ
-  * @retval ×ª»»µÃµ½µÄµçÁ÷Öµ
+  * @brief  è·å–Vç›¸çš„ç”µæµå€¼
+  * @param  æ— 
+  * @retval è½¬æ¢å¾—åˆ°çš„ç”µæµå€¼
   */
 int32_t get_curr_val_v(void)
 {
   static uint8_t flag = 0;
-  static uint32_t adc_offset = 0;    // Æ«ÖÃµçÑ¹
-  int16_t curr_adc_mean = 0;         // µçÁ÷ ACD ²ÉÑù½á¹ûÆ½¾ùÖµ
+  static uint32_t adc_offset = 0;    // åç½®ç”µå‹
+  int16_t curr_adc_mean = 0;         // ç”µæµ ACD é‡‡æ ·ç»“æœå¹³å‡å€¼
   
-  curr_adc_mean = adc_mean_sum_v / adc_mean_count_v;    // ±£´æÆ½¾ùÖµ
+  curr_adc_mean = adc_mean_sum_v / adc_mean_count_v;    // ä¿å­˜å¹³å‡å€¼
   
 
     adc_mean_count_v = 0;
@@ -145,33 +167,33 @@ int32_t get_curr_val_v(void)
     
     if (flag < 17)
     {
-      adc_offset = curr_adc_mean;    // ¶à´Î¼ÇÂ¼Æ«ÖÃµçÑ¹£¬´ıÏµÍ³ÎÈ¶¨Æ«ÖÃµçÑ¹²ÅÎªÓĞĞ§Öµ
+      adc_offset = curr_adc_mean;    // å¤šæ¬¡è®°å½•åç½®ç”µå‹ï¼Œå¾…ç³»ç»Ÿç¨³å®šåç½®ç”µå‹æ‰ä¸ºæœ‰æ•ˆå€¼
       flag += 1;
     }
     if(curr_adc_mean>=adc_offset)
 	{
-		curr_adc_mean -= adc_offset;                     // ¼õÈ¥Æ«ÖÃµçÑ¹
+		curr_adc_mean -= adc_offset;                     // å‡å»åç½®ç”µå‹
 	}else
 	{
 		curr_adc_mean=0;
 	}
 
-  float vdc = GET_ADC_VDC_VAL(curr_adc_mean);      // »ñÈ¡µçÑ¹Öµ
+  float vdc = GET_ADC_VDC_VAL(curr_adc_mean);      // è·å–ç”µå‹å€¼
   
   return GET_ADC_CURR_VAL(vdc);
 }
 /**
-  * @brief  »ñÈ¡UÏàµÄµçÁ÷Öµ
-  * @param  ÎŞ
-  * @retval ×ª»»µÃµ½µÄµçÁ÷Öµ
+  * @brief  è·å–Uç›¸çš„ç”µæµå€¼
+  * @param  æ— 
+  * @retval è½¬æ¢å¾—åˆ°çš„ç”µæµå€¼
   */
 int32_t get_curr_val_u(void)
 {
   static uint8_t flag = 0;
-  static uint32_t adc_offset = 0;    // Æ«ÖÃµçÑ¹
-  int16_t curr_adc_mean = 0;         // µçÁ÷ ACD ²ÉÑù½á¹ûÆ½¾ùÖµ
+  static uint32_t adc_offset = 0;    // åç½®ç”µå‹
+  int16_t curr_adc_mean = 0;         // ç”µæµ ACD é‡‡æ ·ç»“æœå¹³å‡å€¼
   
-  curr_adc_mean = adc_mean_sum_u / adc_mean_count_u;    // ±£´æÆ½¾ùÖµ
+  curr_adc_mean = adc_mean_sum_u / adc_mean_count_u;    // ä¿å­˜å¹³å‡å€¼
   
 
     adc_mean_count_u = 0;
@@ -179,33 +201,33 @@ int32_t get_curr_val_u(void)
     
     if (flag < 17)
     {
-      adc_offset = curr_adc_mean;    // ¶à´Î¼ÇÂ¼Æ«ÖÃµçÑ¹£¬´ıÏµÍ³ÎÈ¶¨Æ«ÖÃµçÑ¹²ÅÎªÓĞĞ§Öµ
+      adc_offset = curr_adc_mean;    // å¤šæ¬¡è®°å½•åç½®ç”µå‹ï¼Œå¾…ç³»ç»Ÿç¨³å®šåç½®ç”µå‹æ‰ä¸ºæœ‰æ•ˆå€¼
       flag += 1;
     }
     if(curr_adc_mean>=adc_offset)
 	{
-		curr_adc_mean -= adc_offset;                     // ¼õÈ¥Æ«ÖÃµçÑ¹
+		curr_adc_mean -= adc_offset;                     // å‡å»åç½®ç”µå‹
 	}else
 	{
 		curr_adc_mean=0;
 	}
 
-  float vdc = GET_ADC_VDC_VAL(curr_adc_mean);      // »ñÈ¡µçÑ¹Öµ
+  float vdc = GET_ADC_VDC_VAL(curr_adc_mean);      // è·å–ç”µå‹å€¼
   
   return GET_ADC_CURR_VAL(vdc);
 }
 /**
-  * @brief  »ñÈ¡WÏàµÄµçÁ÷Öµ
-  * @param  ÎŞ
-  * @retval ×ª»»µÃµ½µÄµçÁ÷Öµ
+  * @brief  è·å–Wç›¸çš„ç”µæµå€¼
+  * @param  æ— 
+  * @retval è½¬æ¢å¾—åˆ°çš„ç”µæµå€¼
   */
 int32_t get_curr_val_w(void)
 {
   static uint8_t flag = 0;
-  static uint32_t adc_offset = 0;    // Æ«ÖÃµçÑ¹
-  int16_t curr_adc_mean = 0;         // µçÁ÷ ACD ²ÉÑù½á¹ûÆ½¾ùÖµ
+  static uint32_t adc_offset = 0;    // åç½®ç”µå‹
+  int16_t curr_adc_mean = 0;         // ç”µæµ ACD é‡‡æ ·ç»“æœå¹³å‡å€¼
   
-  curr_adc_mean = adc_mean_sum_w / adc_mean_count_w;    // ±£´æÆ½¾ùÖµ
+  curr_adc_mean = adc_mean_sum_w / adc_mean_count_w;    // ä¿å­˜å¹³å‡å€¼
   
 
     adc_mean_count_w = 0;
@@ -213,30 +235,45 @@ int32_t get_curr_val_w(void)
     
     if (flag < 17)
     {
-      adc_offset = curr_adc_mean;    // ¶à´Î¼ÇÂ¼Æ«ÖÃµçÑ¹£¬´ıÏµÍ³ÎÈ¶¨Æ«ÖÃµçÑ¹²ÅÎªÓĞĞ§Öµ
+      adc_offset = curr_adc_mean;    // å¤šæ¬¡è®°å½•åç½®ç”µå‹ï¼Œå¾…ç³»ç»Ÿç¨³å®šåç½®ç”µå‹æ‰ä¸ºæœ‰æ•ˆå€¼
       flag += 1;
     }
     if(curr_adc_mean>=adc_offset)
 	{
-		curr_adc_mean -= adc_offset;                     // ¼õÈ¥Æ«ÖÃµçÑ¹
+		curr_adc_mean -= adc_offset;                     // å‡å»åç½®ç”µå‹
 	}else
 	{
 		curr_adc_mean=0;
 	}
 
-  float vdc = GET_ADC_VDC_VAL(curr_adc_mean);      // »ñÈ¡µçÑ¹Öµ
+  float vdc = GET_ADC_VDC_VAL(curr_adc_mean);      // è·å–ç”µå‹å€¼
   
   return GET_ADC_CURR_VAL(vdc);
 }
 /**
-  * @brief  »ñÈ¡µçÔ´µçÑ¹Öµ
-  * @param  ÎŞ
-  * @retval ×ª»»µÃµ½µÄµçÑ¹Öµ
+  * @brief  è·å–ç”µæºç”µå‹å€¼
+  * @param  æ— 
+  * @retval è½¬æ¢å¾—åˆ°çš„ç”µå‹å€¼
   */
 float get_vbus_val(void)
 {
-  float vdc = GET_ADC_VDC_VAL(vbus_adc_mean);      // »ñÈ¡µçÑ¹Öµ
+  float vdc = GET_ADC_VDC_VAL(vbus_adc_mean);      // è·å–ç”µå‹å€¼
   return GET_VBUS_VAL(vdc);
+}
+
+float get_emf_u_val(void)
+{
+  return GET_ADC_VDC_VAL(emf_u_adc_mean);
+}
+
+float get_emf_v_val(void)
+{
+  return GET_ADC_VDC_VAL(emf_v_adc_mean);
+}
+
+float get_emf_w_val(void)
+{
+  return GET_ADC_VDC_VAL(emf_w_adc_mean);
 }
 
 uint8_t flag = 0;
@@ -245,15 +282,11 @@ int32_t current_u = 0;
 int32_t current_w = 0;
 void adc_process(void)
 {
-	if (HAL_GetTick()%50 == 0 && flag == 0)    // Ã¿50ºÁÃë¶ÁÈ¡Ò»´ÎÎÂ¶È¡¢µçÑ¹
+	if (flag == 1)    // æ¯50æ¯«ç§’è¯»å–ä¸€æ¬¡æ¸©åº¦ã€ç”µå‹
 	{
-		flag = 1;      
+		flag = 0;      
 		current_v = get_curr_val_v();
 		current_u = get_curr_val_u();
 		current_w = get_curr_val_w();
-	}
-	else if (HAL_GetTick()%50 != 0 && flag == 1)
-	{
-		flag = 0;
 	}
 }

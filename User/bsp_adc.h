@@ -3,50 +3,29 @@
 
 #include "stm32f4xx.h"
 
-#define VREF                            3.3f     // ²Î¿¼µçÑ¹£¬ÀíÂÛÉÏÊÇ3.3
-#define ADC_NUM_MAX                     320    // ADC ×ª»»½á¹û»º³åÇø×î´óÖµ
+#define VREF                            3.3f     // å‚è€ƒç”µå‹ï¼Œç†è®ºä¸Šæ˜¯3.3
+#define ADC_NUM_MAX                     320    // ADC è½¬æ¢ç»“æœç¼“å†²åŒºæœ€å¤§å€¼
 
-#define GET_ADC_VDC_VAL(val)            ((float)val/4096.0f*VREF)          // µÃµ½µçÑ¹Öµ
+#define GET_ADC_VDC_VAL(val)            ((float)val/4096.0f*VREF)          // å¾—åˆ°ç”µå‹å€¼
 
-#define TEMP_ADC_GPIO_PORT              GPIOF
-#define TEMP_ADC_GPIO_PIN               GPIO_PIN_10
+#define GET_ADC_CURR_VAL(val)           (((float)val)/(float)8.0/(float)0.02*(float)1000.0)        // å¾—åˆ°ç”µæµå€¼ï¼Œç”µå‹æ”¾å¤§8å€ï¼Œ0.02æ˜¯é‡‡æ ·ç”µé˜»ï¼Œå•ä½mAã€‚
 
-#define TEMP_ADC_CHANNEL                ADC_CHANNEL_8
+#define GET_VBUS_VAL(val)               (((float)val - 1.24f) * 37.0f )      // è·å–ç”µå‹å€¼ï¼ˆæµ‹é‡ç”µå‹æ˜¯ç”µæºç”µå‹çš„1/37ï¼‰
 
-#define CURR_U_ADC_GPIO_PORT              GPIOA
-#define CURR_U_ADC_GPIO_PIN               GPIO_PIN_3
+extern ADC_HandleTypeDef hadc1;
 
-#define CURR_U_ADC_CHANNEL                ADC_CHANNEL_3
+extern uint8_t flag;
 
-#define CURR_V_ADC_GPIO_PORT              GPIOA
-#define CURR_V_ADC_GPIO_PIN               GPIO_PIN_4
-
-#define CURR_V_ADC_CHANNEL                ADC_CHANNEL_4
-
-#define CURR_W_ADC_GPIO_PORT              GPIOA
-#define CURR_W_ADC_GPIO_PIN               GPIO_PIN_6
-
-#define CURR_W_ADC_CHANNEL                ADC_CHANNEL_6
-
-#define GET_ADC_CURR_VAL(val)           (((float)val)/(float)8.0/(float)0.02*(float)1000.0)        // µÃµ½µçÁ÷Öµ£¬µçÑ¹·Å´ó8±¶£¬0.02ÊÇ²ÉÑùµç×è£¬µ¥Î»mA¡£
-
-#define VBUS_GPIO_PORT                  GPIOB
-#define VBUS_GPIO_PIN                   GPIO_PIN_0
-
-#define VBUS_ADC_CHANNEL                ADC_CHANNEL_8
-
-#define GET_VBUS_VAL(val)               (((float)val - 1.24f) * 37.0f )      // »ñÈ¡µçÑ¹Öµ£¨²âÁ¿µçÑ¹ÊÇµçÔ´µçÑ¹µÄ1/37£©
-
-extern ADC_HandleTypeDef ADC_Handle;
-
-int32_t get_curr_val_v(void);//»ñÈ¡VÏàµÄµçÁ÷Öµ
-int32_t get_curr_val_u(void);//»ñÈ¡UÏàµÄµçÁ÷Öµ
-int32_t get_curr_val_w(void);//»ñÈ¡WÏàµÄµçÁ÷Öµ
-void ADC_Init(void);				//ADCµÄ³õÊ¼»¯
-float get_ntc_v_val(void);	//»ñÈ¡ÎÂ¶È´«¸ĞÆ÷¶ËµÄµçÑ¹Öµ	
-float get_ntc_r_val(void);	//»ñÈ¡ÎÂ¶È´«¸ĞÆ÷¶ËµÄµç×èÖµ
-float get_ntc_t_val(void);	//»ñÈ¡ÎÂ¶È´«¸ĞÆ÷µÄÎÂ¶È
-float get_vbus_val(void);		//»ñÈ¡µçÔ´µçÑ¹Öµ
+int32_t get_curr_val_v(void);//è·å–Vç›¸çš„ç”µæµå€¼
+int32_t get_curr_val_u(void);//è·å–Uç›¸çš„ç”µæµå€¼
+int32_t get_curr_val_w(void);//è·å–Wç›¸çš„ç”µæµå€¼
+void ADC_Init(void);				//ADCçš„åˆå§‹åŒ–
+float get_ntc_v_val(void);	//è·å–æ¸©åº¦ä¼ æ„Ÿå™¨ç«¯çš„ç”µå‹å€¼	
+float get_ntc_r_val(void);	//è·å–æ¸©åº¦ä¼ æ„Ÿå™¨ç«¯çš„ç”µé˜»å€¼
+float get_ntc_t_val(void);	//è·å–æ¸©åº¦ä¼ æ„Ÿå™¨çš„æ¸©åº¦
+float get_vbus_val(void);		//è·å–ç”µæºç”µå‹å€¼
+float get_emf_u_val(void);
+float get_emf_v_val(void);
+float get_emf_w_val(void);
 void adc_process(void);
- 
 #endif /* __BSP_ADC_H */

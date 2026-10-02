@@ -1,66 +1,68 @@
 #include "bsp_motor.h"
 
-TIM_HandleTypeDef  htimx_bldcm;
-TIM_HandleTypeDef htimx_hall;
+extern TIM_HandleTypeDef htim1;
+extern TIM_HandleTypeDef htim3;
+#define htimx_bldcm htim1
+#define htimx_hall htim3
 
 static uint16_t bldcm_pulse = 0;
 
 /**
-  * @brief  Í£Ö¹pwmÊä³ö
-  * @param  ÎŞ
-  * @retval ÎŞ
+  * @brief  åœæ­¢pwmè¾“å‡º
+  * @param  æ— 
+  * @retval æ— 
   */
 void stop_pwm_output(void)
 {
-  /* ¹Ø±Õ¶¨Ê±Æ÷Í¨µÀ1Êä³öPWM */
+  /* å…³é—­å®šæ—¶å™¨é€šé“1è¾“å‡ºPWM */
   __HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_1, 0);
 
-  /* ¹Ø±Õ¶¨Ê±Æ÷Í¨µÀ2Êä³öPWM */
+  /* å…³é—­å®šæ—¶å™¨é€šé“2è¾“å‡ºPWM */
   __HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_2, 0);
   
-  /* ¹Ø±Õ¶¨Ê±Æ÷Í¨µÀ3Êä³öPWM */
+  /* å…³é—­å®šæ—¶å™¨é€šé“3è¾“å‡ºPWM */
   __HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_3, 0);
   
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, GPIO_PIN_RESET);    // ¹Ø±ÕÏÂÇÅ±Û
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET);    // ¹Ø±ÕÏÂÇÅ±Û
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_15, GPIO_PIN_RESET);    // ¹Ø±ÕÏÂÇÅ±Û
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, GPIO_PIN_RESET);    // å…³é—­ä¸‹æ¡¥è‡‚
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET);    // å…³é—­ä¸‹æ¡¥è‡‚
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_15, GPIO_PIN_RESET);    // å…³é—­ä¸‹æ¡¥è‡‚
 }
 
 /**
-  * @brief  ÉèÖÃpwmÊä³öµÄÕ¼¿Õ±È
-  * @param  pulse:ÒªÉèÖÃµÄÕ¼¿Õ±È
-  * @retval ÎŞ
+  * @brief  è®¾ç½®pwmè¾“å‡ºçš„å ç©ºæ¯”
+  * @param  pulse:è¦è®¾ç½®çš„å ç©ºæ¯”
+  * @retval æ— 
   */
 void set_pwm_pulse(uint16_t pulse)
 {
-  /* ÉèÖÃ¶¨Ê±Æ÷Í¨µÀÊä³ö PWM µÄÕ¼¿Õ±È */
+  /* è®¾ç½®å®šæ—¶å™¨é€šé“è¾“å‡º PWM çš„å ç©ºæ¯” */
 	bldcm_pulse = pulse;
 }
 
 /**
-  * @brief  Ê¹ÄÜ»ô¶û´«¸ĞÆ÷
-  * @param  ÎŞ
-  * @retval ÎŞ
+  * @brief  ä½¿èƒ½éœå°”ä¼ æ„Ÿå™¨
+  * @param  æ— 
+  * @retval æ— 
   */
 void hall_enable(void)
 {
-  /* Ê¹ÄÜ»ô¶û´«¸ĞÆ÷½Ó¿Ú */
+  /* ä½¿èƒ½éœå°”ä¼ æ„Ÿå™¨æ¥å£ */
   __HAL_TIM_ENABLE_IT(&htimx_hall, TIM_IT_TRIGGER);
   __HAL_TIM_ENABLE_IT(&htimx_hall, TIM_IT_UPDATE);
   
-  HAL_TIMEx_HallSensor_Start(&htimx_hall);
+  HAL_TIMEx_HallSensor_Start_IT(&htimx_hall);
   
-  HAL_TIM_TriggerCallback(&htimx_hall);   // Ö´ĞĞÒ»´Î»»Ïà
+  HAL_TIM_TriggerCallback(&htimx_hall);   // æ‰§è¡Œä¸€æ¬¡æ¢ç›¸
 }
 
 /**
-  * @brief  ½ûÓÃ»ô¶û´«¸ĞÆ÷
-  * @param  ÎŞ
-  * @retval ÎŞ
+  * @brief  ç¦ç”¨éœå°”ä¼ æ„Ÿå™¨
+  * @param  æ— 
+  * @retval æ— 
   */
 void hall_disable(void)
 {
-  /* ½ûÓÃ»ô¶û´«¸ĞÆ÷½Ó¿Ú */
+  /* ç¦ç”¨éœå°”ä¼ æ„Ÿå™¨æ¥å£ */
   __HAL_TIM_DISABLE_IT(&htimx_hall, TIM_IT_TRIGGER);
   __HAL_TIM_DISABLE_IT(&htimx_hall, TIM_IT_UPDATE);
   HAL_TIMEx_HallSensor_Stop(&htimx_hall);
@@ -71,40 +73,40 @@ uint8_t get_hall_state(void)
   uint8_t state = 0;
   
 #if 1
-  /* ¶ÁÈ¡»ô¶û´«¸ĞÆ÷ U µÄ×´Ì¬ */
-  if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_0) != GPIO_PIN_RESET)
+  /* è¯»å–éœå°”ä¼ æ„Ÿå™¨ U çš„çŠ¶æ€ */
+  if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_6) != GPIO_PIN_RESET)
   {
     state |= 0x01U << 0;
   }
   
-  /* ¶ÁÈ¡»ô¶û´«¸ĞÆ÷ V µÄ×´Ì¬ */
-  if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_2) != GPIO_PIN_RESET)
+  /* è¯»å–éœå°”ä¼ æ„Ÿå™¨ V çš„çŠ¶æ€ */
+  if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_7) != GPIO_PIN_RESET)
   {
     state |= 0x01U << 1;
   }
   
-  /* ¶ÁÈ¡»ô¶û´«¸ĞÆ÷ W µÄ×´Ì¬ */
-  if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_3) != GPIO_PIN_RESET)
+  /* è¯»å–éœå°”ä¼ æ„Ÿå™¨ W çš„çŠ¶æ€ */
+  if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_8) != GPIO_PIN_RESET)
   {
     state |= 0x01U << 2;
   }
 #else
-  state = (GPIOH->IDR >> 10) & 7;    // ¶Á 3 ¸ö»ô¶û´«¸ĞÆ÷µÄ×´Ì¬
+  state = (GPIOH->IDR >> 10) & 7;    // è¯» 3 ä¸ªéœå°”ä¼ æ„Ÿå™¨çš„çŠ¶æ€
 #endif
 
-  return state;    // ·µ»Ø´«¸ĞÆ÷×´Ì¬
+  return state;    // è¿”å›ä¼ æ„Ÿå™¨çŠ¶æ€
 }
 
-int update = 0;     // ¶¨Ê±Æ÷¸üĞÂ¼ÆÊı
+int update = 0;     // å®šæ—¶å™¨æ›´æ–°è®¡æ•°
 
 /**
-  * @brief  »ô¶û´«¸ĞÆ÷´¥·¢»Øµ÷º¯Êı
-  * @param  htim:¶¨Ê±Æ÷¾ä±ú
-  * @retval ÎŞ
+  * @brief  éœå°”ä¼ æ„Ÿå™¨è§¦å‘å›è°ƒå‡½æ•°
+  * @param  htim:å®šæ—¶å™¨å¥æŸ„
+  * @retval æ— 
   */
 void HAL_TIM_TriggerCallback(TIM_HandleTypeDef *htim)
 {
-  /* »ñÈ¡»ô¶û´«¸ĞÆ÷Òı½Å×´Ì¬,×÷Îª»»ÏàµÄÒÀ¾İ */
+  /* è·å–éœå°”ä¼ æ„Ÿå™¨å¼•è„šçŠ¶æ€,ä½œä¸ºæ¢ç›¸çš„ä¾æ® */
   uint8_t step = 0;
   step = get_hall_state();
 
@@ -115,92 +117,92 @@ void HAL_TIM_TriggerCallback(TIM_HandleTypeDef *htim)
 	switch(step)
 	{
 		case 1:    /* U+ W- */
-			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_2, 0);                            // Í¨µÀ 2 ÅäÖÃÎª 0
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET);    // ¹Ø±ÕÏÂÇÅ±Û
+			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_2, 0);                            // é€šé“ 2 é…ç½®ä¸º 0
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET);    // å…³é—­ä¸‹æ¡¥è‡‚
 		
-			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_3, 0);                            // Í¨µÀ 3 ÅäÖÃÎª 0
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, GPIO_PIN_RESET);    // ¹Ø±ÕÏÂÇÅ±Û
+			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_3, 0);                            // é€šé“ 3 é…ç½®ä¸º 0
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, GPIO_PIN_RESET);    // å…³é—­ä¸‹æ¡¥è‡‚
 
-			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_1, bldcm_pulse);                  // Í¨µÀ 1 ÅäÖÃµÄÕ¼¿Õ±È
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_15, GPIO_PIN_SET);      // ¿ªÆôÏÂÇÅ±Û
+			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_1, bldcm_pulse);                  // é€šé“ 1 é…ç½®çš„å ç©ºæ¯”
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_15, GPIO_PIN_SET);      // å¼€å¯ä¸‹æ¡¥è‡‚
 			break;
 		
 		case 2:     /* V+ U- */
-			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_3, 0);                            // Í¨µÀ 3 ÅäÖÃÎª 0
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_15, GPIO_PIN_RESET);    // ¹Ø±ÕÏÂÇÅ±Û
+			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_3, 0);                            // é€šé“ 3 é…ç½®ä¸º 0
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_15, GPIO_PIN_RESET);    // å…³é—­ä¸‹æ¡¥è‡‚
 
-			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_1, 0);                            // Í¨µÀ 1 ÅäÖÃÎª 0
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET);    // ¹Ø±ÕÏÂÇÅ±Û
+			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_1, 0);                            // é€šé“ 1 é…ç½®ä¸º 0
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET);    // å…³é—­ä¸‹æ¡¥è‡‚
 		
-			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_2, bldcm_pulse);                  // Í¨µÀ 2 ÅäÖÃµÄÕ¼¿Õ±È
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, GPIO_PIN_SET);      // ¿ªÆôÏÂÇÅ±Û
+			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_2, bldcm_pulse);                  // é€šé“ 2 é…ç½®çš„å ç©ºæ¯”
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, GPIO_PIN_SET);      // å¼€å¯ä¸‹æ¡¥è‡‚
 		
 			break;
 		
 		case 3:    /* V+ W- */
-			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_1, 0);                            // Í¨µÀ 1 ÅäÖÃÎª 0
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, GPIO_PIN_RESET);    // ¹Ø±ÕÏÂÇÅ±Û
+			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_1, 0);                            // é€šé“ 1 é…ç½®ä¸º 0
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, GPIO_PIN_RESET);    // å…³é—­ä¸‹æ¡¥è‡‚
 
-			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_3, 0);                            // Í¨µÀ 3 ÅäÖÃÎª 0
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET);    // ¹Ø±ÕÏÂÇÅ±Û
+			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_3, 0);                            // é€šé“ 3 é…ç½®ä¸º 0
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET);    // å…³é—­ä¸‹æ¡¥è‡‚
 			
-			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_2, bldcm_pulse);                  // Í¨µÀ 2 ÅäÖÃµÄÕ¼¿Õ±È
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_15, GPIO_PIN_SET);      // ¿ªÆôÏÂÇÅ±Û
+			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_2, bldcm_pulse);                  // é€šé“ 2 é…ç½®çš„å ç©ºæ¯”
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_15, GPIO_PIN_SET);      // å¼€å¯ä¸‹æ¡¥è‡‚
 			break;
 		
 		case 4:     /* W+ V- */
-			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_1, 0);                            // Í¨µÀ 1 ÅäÖÃÎª 0
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, GPIO_PIN_RESET);    // ¹Ø±ÕÏÂÇÅ±Û
+			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_1, 0);                            // é€šé“ 1 é…ç½®ä¸º 0
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, GPIO_PIN_RESET);    // å…³é—­ä¸‹æ¡¥è‡‚
 
-			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_2, 0);                            // Í¨µÀ 2 ÅäÖÃÎª 0
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_15, GPIO_PIN_RESET);    // ¹Ø±ÕÏÂÇÅ±Û
+			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_2, 0);                            // é€šé“ 2 é…ç½®ä¸º 0
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_15, GPIO_PIN_RESET);    // å…³é—­ä¸‹æ¡¥è‡‚
  
-			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_3, bldcm_pulse);                  // Í¨µÀ 3 ÅäÖÃµÄÕ¼¿Õ±È
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_SET);      // ¿ªÆôÏÂÇÅ±Û 
+			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_3, bldcm_pulse);                  // é€šé“ 3 é…ç½®çš„å ç©ºæ¯”
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_SET);      // å¼€å¯ä¸‹æ¡¥è‡‚ 
 			break;
 		
 		case 5:     /* U+  V -*/
-			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_3, 0);                            // Í¨µÀ 3 ÅäÖÃÎª 0
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_15, GPIO_PIN_RESET);    // ¹Ø±ÕÏÂÇÅ±Û
+			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_3, 0);                            // é€šé“ 3 é…ç½®ä¸º 0
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_15, GPIO_PIN_RESET);    // å…³é—­ä¸‹æ¡¥è‡‚
 		
-			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_2, 0);                            // Í¨µÀ 2 ÅäÖÃÎª 0
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, GPIO_PIN_RESET);    // ¹Ø±ÕÏÂÇÅ±Û
+			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_2, 0);                            // é€šé“ 2 é…ç½®ä¸º 0
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, GPIO_PIN_RESET);    // å…³é—­ä¸‹æ¡¥è‡‚
 		
-			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_1, bldcm_pulse);                  // Í¨µÀ 1 ÅäÖÃµÄÕ¼¿Õ±È
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_SET);      // ¿ªÆôÏÂÇÅ±Û
+			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_1, bldcm_pulse);                  // é€šé“ 1 é…ç½®çš„å ç©ºæ¯”
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_SET);      // å¼€å¯ä¸‹æ¡¥è‡‚
 			break;
 		
 		case 6:     /* W+ U- */
-			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_2, 0);                            // Í¨µÀ 2 ÅäÖÃÎª 0
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET);    // ¹Ø±ÕÏÂÇÅ±Û
+			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_2, 0);                            // é€šé“ 2 é…ç½®ä¸º 0
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET);    // å…³é—­ä¸‹æ¡¥è‡‚
 		
-			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_1, 0);                            // Í¨µÀ 1 ÅäÖÃÎª 0
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_15, GPIO_PIN_RESET);    // ¹Ø±ÕÏÂÇÅ±Û
+			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_1, 0);                            // é€šé“ 1 é…ç½®ä¸º 0
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_15, GPIO_PIN_RESET);    // å…³é—­ä¸‹æ¡¥è‡‚
 		
-			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_3, bldcm_pulse);                  // Í¨µÀ 3 ÅäÖÃµÄÕ¼¿Õ±È
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, GPIO_PIN_SET);      // ¿ªÆôÏÂÇÅ±Û
+			__HAL_TIM_SET_COMPARE(&htimx_bldcm, TIM_CHANNEL_3, bldcm_pulse);                  // é€šé“ 3 é…ç½®çš„å ç©ºæ¯”
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, GPIO_PIN_SET);      // å¼€å¯ä¸‹æ¡¥è‡‚
 			break;
 	}
   
-  HAL_TIM_GenerateEvent(&htimx_bldcm, TIM_EVENTSOURCE_COM);    // Èí¼ş²úÉú»»ÏàÊÂ¼ş£¬´ËÊ±²Å½«ÅäÖÃĞ´Èë
+  HAL_TIM_GenerateEvent(&htimx_bldcm, TIM_EVENTSOURCE_COM);    // è½¯ä»¶äº§ç”Ÿæ¢ç›¸äº‹ä»¶ï¼Œæ­¤æ—¶æ‰å°†é…ç½®å†™å…¥
 
   update = 0;
 }
 
 /**
-  * @brief  ¶¨Ê±Æ÷¸üĞÂÖĞ¶Ï»Øµ÷º¯Êı
-  * @param  htim:¶¨Ê±Æ÷¾ä±ú
-  * @retval ÎŞ
+  * @brief  å®šæ—¶å™¨æ›´æ–°ä¸­æ–­å›è°ƒå‡½æ•°
+  * @param  htim:å®šæ—¶å™¨å¥æŸ„
+  * @retval æ— 
   */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-  if (update++ > 1)    // ÓĞÒ»´ÎÔÚ²úÉú¸üĞÂÖĞ¶ÏÇ°»ô¶û´«¸ĞÆ÷Ã»ÓĞ²¶»ñµ½Öµ
+  if (update++ > 1)    // æœ‰ä¸€æ¬¡åœ¨äº§ç”Ÿæ›´æ–°ä¸­æ–­å‰éœå°”ä¼ æ„Ÿå™¨æ²¡æœ‰æ•è·åˆ°å€¼
   {
     update = 0;
     
-    /* ¶Â×ª³¬Ê±Í£Ö¹ PWM Êä³ö */
-    hall_disable();       // ½ûÓÃ»ô¶û´«¸ĞÆ÷½Ó¿Ú
-    stop_pwm_output();    // Í£Ö¹ PWM Êä³ö
+    /* å µè½¬è¶…æ—¶åœæ­¢ PWM è¾“å‡º */
+    hall_disable();       // ç¦ç”¨éœå°”ä¼ æ„Ÿå™¨æ¥å£
+    stop_pwm_output();    // åœæ­¢ PWM è¾“å‡º
   }
 }
 

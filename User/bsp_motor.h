@@ -4,13 +4,14 @@
 #include "stm32f4xx.h"
 #include "bsp_bldcm_control.h"
 
-extern TIM_HandleTypeDef  htimx_bldcm;
+#include "tim.h"
+#define htimx_bldcm htim1
 
 #define PWM_PERIOD_COUNT     (5600)
 #define PWM_MAX_PERIOD_COUNT    (PWM_PERIOD_COUNT - 100)
 #define PWM_PRESCALER_COUNT     (2)
 
-extern TIM_HandleTypeDef htimx_hall;
+#define htimx_hall htim3
 
 #define HALL_PERIOD_COUNT     (0xFFFF)
 #define HALL_PRESCALER_COUNT     (128)

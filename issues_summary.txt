@@ -1,0 +1,51 @@
+﻿无刷电机工程配置问题总结
+
+工程：brushlessmotor
+
+一、TIM1 时钟来源配置错误（主要问题）
+位置：Core/Src/tim.c，MX_TIM1_Init()
+原配置：TIM_SLAVEMODE_EXTERNAL1，触发来源 TIM_TS_ITR0。
+原因：TIM1 依赖 ITR0 提供计数时钟，但本工程没有配置相应的触发源，不能按内部时钟正常计数，因而无法产生预期 PWM。
+已修改：改用 TIM_CLOCKSOURCE_INTERNAL，取消外部时钟从模式。
+在 168 MHz 定时器时钟、预分频 2-1、周期 5600-1 的条件下，PWM 频率为 15 kHz。
+
+二、下桥臂引脚模式与换相代码不匹配（主要问题）
+位置：Core/Src/tim.c、Core/Src/gpio.c、User/bsp_motor.c。
+原配置：PB13、PB14、PB15 分别配置为 TIM1_CH1N、CH2N、CH3N 的复用输出。
+原因：换相代码使用 HAL_GPIO_WritePin() 控制这三个引脚，但引脚处于定时器复用模式，GPIO 写入不能直接控制实际输出。
+例程采用的是“上桥臂 PWM，下桥臂普通 GPIO”的六步换相方式。
+已修改：PB13、PB14、PB15 改为 GPIO_MODE_OUTPUT_PP，初始化时输出低电平；PA8、PA9、PA10 保持 TIM1 上桥臂 PWM 输出。
+
+三、启动了不需要的互补 PWM
+位置：Core/Src/main.c。
+原代码：调用三个 HAL_TIMEx_PWMN_Start() 启动下桥臂互补输出。
+原因：当前换相方案要求下桥臂由普通 GPIO 控制，互补 PWM 输出方式与该方案不匹配。
+已修改：删除三个 HAL_TIMEx_PWMN_Start()，仅启动 TIM1 通道 1、2、3 的主 PWM；增加 PWM 启动返回值检查。
+
+四、定时器初始化接口与启动接口不统一
+位置：Core/Src/tim.c。
+原代码：使用 HAL_TIM_OC_Init()、HAL_TIM_OC_ConfigChannel() 初始化，但使用 HAL_TIM_PWM_Start() 启动。
+说明：原通道模式已经设置为 TIM_OCMODE_PWM1，所以仅凭 OC 接口名称不能断定它必然不输出 PWM；不过与例程及目标用途统一使用 PWM 接口更清晰，也避免后续配置不一致。
+已修改：统一使用 HAL_TIM_PWM_Init()、HAL_TIM_PWM_ConfigChannel()。
+
+五、霍尔输入缺少内部上拉（是否影响取决于硬件）
+位置：Core/Src/tim.c，HAL_TIMEx_HallSensor_MspInit()。
+原配置：PC6、PC7、PC8 使用 GPIO_NOPULL；例程使用 GPIO_PULLUP。
+原因：如果霍尔输出为开漏或集电极开路，且硬件没有外部上拉，不加上拉会使输入电平不稳定，影响霍尔状态读取和换相。
+已修改：PC6、PC7、PC8 改用 GPIO_PULLUP，保持 TIM3 复用功能。
+
+六、同步修正 CubeMX 配置文件
+位置：BRUSHLESSMOTOR.ioc。
+已修改：TIM1 内部时钟；三个主通道 PWM；PB13～PB15 普通 GPIO 输出；PC6～PC8 上拉；TIM1 预分频 2-1，重复计数器 0。
+原因：原 .ioc 与部分源代码不一致，重新生成代码可能恢复错误配置。
+说明：尚未通过 CubeMX 实际重新生成代码验证。
+
+七、其他核对结果和后续验证
+1. 当前没有确认 ADC1 是电机不转的主要原因。该工程通过霍尔信号换相，并未使用 ADC 采样结果决定是否启动 PWM。本次未修改 ADC 配置。
+2. TIM1/TIM8、TIM3/TIM5 功能可以对应，但引脚不会自动对应。必须确认实际硬件接线与本工程一致：
+   上桥臂 U/V/W：PA8、PA9、PA10。
+   下桥臂 U/V/W：PB13、PB14、PB15。
+   霍尔 U/V/W：PC6、PC7、PC8。
+   驱动使能 SD：PG12。
+3. 本工程需要按下并松开 KEY1 后启动，不是上电自动转动。
+4. 下载后建议检查：SD 是否为高电平；有效换相状态下相应上桥臂是否有约 15 kHz PWM；转动电机时霍尔状态是否在 1～6 之间变化。

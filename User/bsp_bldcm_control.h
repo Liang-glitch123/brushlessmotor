@@ -5,8 +5,8 @@
 #include "bsp_motor.h"
 #include "main.h"
 
-#define BLDCM_ENABLE_SD()                     HAL_GPIO_WritePin(GPIOE, GPIO_PIN_6, GPIO_PIN_SET)      // ¸ßµçÆ½´ò¿ª-¸ßµçÆ½Ê¹ÄÜ 
-#define BLDCM_DISABLE_SD()                    HAL_GPIO_WritePin(GPIOE, GPIO_PIN_6, GPIO_PIN_RESET)    // µÍµçÆ½¹Ø¶Ï-µÍµçÆ½½ûÓÃ
+#define BLDCM_ENABLE_SD()                     HAL_GPIO_WritePin(Motor1_SD_GPIO_Port, Motor1_SD_Pin, GPIO_PIN_SET)      // é«˜ç”µå¹³æ‰“å¼€-é«˜ç”µå¹³ä½¿èƒ½ 
+#define BLDCM_DISABLE_SD()                    HAL_GPIO_WritePin(Motor1_SD_GPIO_Port, Motor1_SD_Pin, GPIO_PIN_RESET)    // ä½ç”µå¹³å…³æ–­-ä½ç”µå¹³ç¦ç”¨
 
 typedef enum
 {
@@ -16,10 +16,10 @@ typedef enum
 
 typedef struct
 {
-  motor_dir_t direction;    // µç»ú·½Ïò
-  uint16_t dutyfactor;      // PWM Êä³öÕ¼¿Õ±È
-  uint8_t is_enable;        // Ê¹ÄÜµç»ú
-  uint32_t lock_timeout;    // µç»ú¶Â×ª¼ÆÊ±
+  motor_dir_t direction;    // ç”µæœºæ–¹å‘
+  uint16_t dutyfactor;      // PWM è¾“å‡ºå ç©ºæ¯”
+  uint8_t is_enable;        // ä½¿èƒ½ç”µæœº
+  uint32_t lock_timeout;    // ç”µæœºå µè½¬è®¡æ—¶
 }bldcm_data_t;
 
 void bldcm_init(void);
