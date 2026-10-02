@@ -121,6 +121,7 @@ int main(void)
     /* USER CODE BEGIN 3 */
 		Key_process();
 		adc_process();
+		PID_Control();
   }
   /* USER CODE END 3 */
 }

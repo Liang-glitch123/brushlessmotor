@@ -22,6 +22,8 @@ typedef struct
   uint32_t lock_timeout;    // 电机堵转计时
 }bldcm_data_t;
 
+extern bldcm_data_t bldcm_data;
+
 void bldcm_init(void);
 void set_bldcm_speed(uint16_t v);
 void set_bldcm_direction(motor_dir_t dir);

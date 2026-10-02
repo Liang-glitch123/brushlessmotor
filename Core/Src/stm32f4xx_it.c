@@ -23,6 +23,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "bsp_adc.h"
+#include "PID.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -190,6 +191,10 @@ void SysTick_Handler(void)
 	if(ncount%50 == 0)
 	{
 		flag = 1;
+	}
+	if(ncount%40 == 0)
+	{
+		PIDflag = true;
 	}
   /* USER CODE END SysTick_IRQn 0 */
   HAL_IncTick();

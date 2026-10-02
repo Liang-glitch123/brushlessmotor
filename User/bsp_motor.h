@@ -18,6 +18,8 @@ typedef struct
   int32_t location;
 }motor_rotate_t;
 
+extern motor_rotate_t motor_drive;
+
 #define PWM_PERIOD_COUNT     (5600)
 #define PWM_MAX_PERIOD_COUNT    (PWM_PERIOD_COUNT - 100)
 #define PWM_PRESCALER_COUNT     (2)

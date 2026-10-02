@@ -1,5 +1,6 @@
 #include "bsp_key.h"
 #include "bsp_bldcm_control.h"
+#include "PID.h"
 
 uint8_t Key_Scan(GPIO_TypeDef* GPIOx,uint16_t GPIO_Pin)
 {			
@@ -21,7 +22,7 @@ void Key_process(void)
 	/* …®√ËKEY1 */
 	if( Key_Scan(KEY1_GPIO_PORT, KEY1_PIN) == KEY_ON)
 	{
-		set_bldcm_speed(ChannelPulse);
+//		set_bldcm_speed(ChannelPulse);
 		set_bldcm_enable();
 	}
 	
@@ -34,23 +35,25 @@ void Key_process(void)
 	/* …®√ËKEY3 */
 	if( Key_Scan(KEY3_GPIO_PORT, KEY3_PIN) == KEY_ON)
 	{
-		ChannelPulse += PWM_MAX_PERIOD_COUNT/10;
-		
-		if(ChannelPulse > PWM_MAX_PERIOD_COUNT)
-			ChannelPulse = PWM_MAX_PERIOD_COUNT;
-		
-		set_bldcm_speed(ChannelPulse);
+		SpeedPID.Target += 500;
+//		ChannelPulse += PWM_MAX_PERIOD_COUNT/10;
+//		
+//		if(ChannelPulse > PWM_MAX_PERIOD_COUNT)
+//			ChannelPulse = PWM_MAX_PERIOD_COUNT;
+//		
+//		set_bldcm_speed(ChannelPulse);
 	}
 	
 	/* …®√ËKEY4 */
 	if( Key_Scan(KEY4_GPIO_PORT, KEY4_PIN) == KEY_ON)
 	{
-		if(ChannelPulse < PWM_MAX_PERIOD_COUNT/10)
-			ChannelPulse = 0;
-		else
-			ChannelPulse -= PWM_MAX_PERIOD_COUNT/10;
+		SpeedPID.Target -= 500;
+//		if(ChannelPulse < PWM_MAX_PERIOD_COUNT/10)
+//			ChannelPulse = 0;
+//		else
+//			ChannelPulse -= PWM_MAX_PERIOD_COUNT/10;
 
-		set_bldcm_speed(ChannelPulse);
+//		set_bldcm_speed(ChannelPulse);
 	}
 	
 	/* …®√ËKEY5 */

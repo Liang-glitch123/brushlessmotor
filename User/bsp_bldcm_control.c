@@ -2,7 +2,7 @@
 #include "PID.h"
 
 /* 私有变量 */
-static bldcm_data_t bldcm_data;
+bldcm_data_t bldcm_data;
 
 /**
   * @brief  设置电机速度
@@ -43,6 +43,7 @@ motor_dir_t get_bldcm_direction(void)
   */
 void set_bldcm_enable(void)
 {
+	bldcm_data.is_enable = 1;
   BLDCM_ENABLE_SD();
 	HAL_Delay(1);
   hall_enable();
@@ -55,6 +56,8 @@ void set_bldcm_enable(void)
   */
 void set_bldcm_disable(void)
 {
+	bldcm_data.is_enable = 0;
+	
   /* 禁用霍尔传感器接口 */
   hall_disable();
   
