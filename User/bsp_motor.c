@@ -7,6 +7,8 @@ extern TIM_HandleTypeDef htim3;
 
 static uint16_t bldcm_pulse = 0;
 
+motor_rotate_t motor_drive = {0};    // 定义电机驱动管理结构体
+
 /**
   * @brief  停止pwm输出
   * @param  无
@@ -100,6 +102,123 @@ uint8_t get_hall_state(void)
 int update = 0;     // 定时器更新计数
 
 /**
+  * @brief  更新电机实际速度方向与位置
+  * @param  dir_in：霍尔值
+  * @retval 无
+  */
+static uint8_t count = 0;
+static void update_speed_location_dir(uint8_t dir_in)
+{
+  uint8_t step[6] = {1, 3, 2, 6, 4, 5};
+
+  static uint8_t num_old = 0;
+  uint8_t step_loc = 0;    // 记录当前霍尔位置
+  int8_t dir = 1;
+  
+  for (step_loc=0; step_loc<6; step_loc++)
+  {
+    if (step[step_loc] == dir_in)    // 找到当前霍尔的位置
+    {
+      break;
+    }
+  }
+  
+  /* 端点处理 */
+  if (step_loc == 0)
+  {
+    if (num_old == 1)
+    {
+      dir = 1;
+    }
+    else if (num_old == 5)
+    {
+      dir = -1;
+    }
+  }
+  /* 端点处理 */
+  else if (step_loc == 5)
+  {
+    if (num_old == 0)
+    {
+      dir = 1;
+    }
+    else if (num_old == 4)
+    {
+      dir = -1;
+    }
+  }
+  else if (step_loc > num_old)
+  {
+    dir = -1;
+  }
+  else if (step_loc < num_old)
+  {
+    dir = 1;
+  }
+  
+  num_old = step_loc;
+//  motor_drive.speed *= dir;;
+	motor_drive.speed_group[count-1]*= dir;
+  motor_drive.location += dir;    // 更新位置
+//	printf("位置：%d\r\n", motor_drive.location);
+}
+
+/**
+  * @brief  更新电机速度
+  * @param  time：计数器的总值
+  * @param  num：霍尔触发次数
+  * @retval 无
+  */
+static void update_motor_speed(uint8_t dir_in, uint32_t time)
+{
+  int speed_temp = 0;
+  static int flag = 0;
+  float f = 0;
+
+  /* 计算速度：
+     电机每转一圈共用12个脉冲，(1.0/(84000000.0/128.0)为计数器的周期，(1.0/(84000000.0/128.0) * time)为时间长。
+  */
+
+  if (time == 0)
+    motor_drive.speed_group[count++] = 0;
+  else
+  {
+    f = (1.0f / (84000000.0f / HALL_PRESCALER_COUNT) * time);
+    f = (1.0f / 12.0f) / (f  / 60.0f);
+    motor_drive.speed_group[count++] = f;
+  }
+	update_speed_location_dir(dir_in);
+//	motor_drive.speed = motor_drive.speed_group[count-1];
+  if (count >= SPEED_FILTER_NUM)
+  {
+    flag = 1;
+    count = 0;
+  }
+//	return ;
+  speed_temp = 0;
+	
+  /* 计算近 SPEED_FILTER_NUM 次的速度平均值（滤波） */
+  if (flag)
+  {
+    for (uint8_t c=0; c<SPEED_FILTER_NUM; c++)
+    {
+      speed_temp += motor_drive.speed_group[c];
+    }
+
+    motor_drive.speed = speed_temp/ SPEED_FILTER_NUM;
+  }
+  else
+  {
+    for (uint8_t c=0; c<count; c++)
+    {
+      speed_temp += motor_drive.speed_group[c];
+    }
+
+    motor_drive.speed = speed_temp / count;
+  }
+}
+
+/**
   * @brief  霍尔传感器触发回调函数
   * @param  htim:定时器句柄
   * @retval 无
@@ -114,6 +233,11 @@ void HAL_TIM_TriggerCallback(TIM_HandleTypeDef *htim)
 	{
 		step = 7 - step;
 	}
+  if (htim == &htimx_hall)   // 判断是否由触发中断产生
+  {
+    update_motor_speed(step, __HAL_TIM_GET_COMPARE(htim,TIM_CHANNEL_1));
+    motor_drive.timeout = 0;
+  }
 	switch(step)
 	{
 		case 1:    /* U+ W- */

@@ -564,6 +564,11 @@
               <FileType>1</FileType>
               <FilePath>..\User\bsp_adc.c</FilePath>
             </File>
+            <File>
+              <FileName>PID.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\PID.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

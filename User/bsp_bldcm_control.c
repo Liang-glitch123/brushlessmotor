@@ -1,4 +1,5 @@
 #include "bsp_bldcm_control.h"
+#include "PID.h"
 
 /* к╫сп╠Да© */
 static bldcm_data_t bldcm_data;

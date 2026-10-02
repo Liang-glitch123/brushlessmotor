@@ -7,6 +7,17 @@
 #include "tim.h"
 #define htimx_bldcm htim1
 
+#define SPEED_FILTER_NUM      25    // 速度滤波次数
+
+typedef struct
+{
+  int32_t timeout;            // 定时器更新计数
+  float speed;                // 电机速度 rps（转/分钟）
+  int32_t enable_flag;        // 电机使能标志
+  int32_t speed_group[SPEED_FILTER_NUM];
+  int32_t location;
+}motor_rotate_t;
+
 #define PWM_PERIOD_COUNT     (5600)
 #define PWM_MAX_PERIOD_COUNT    (PWM_PERIOD_COUNT - 100)
 #define PWM_PRESCALER_COUNT     (2)
