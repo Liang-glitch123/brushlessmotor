@@ -19,6 +19,9 @@ typedef struct Factor
 		float Error0;
 		float Error1;
 		float ErrorInt;
+	
+		float OutMax;
+		float OutMin;
 }PID_Factor;
 
 extern PID_Factor LocationPID;

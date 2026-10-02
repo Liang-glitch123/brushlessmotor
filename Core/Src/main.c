@@ -27,6 +27,7 @@
 /* USER CODE BEGIN Includes */
 #include "bsp_key.h"
 #include "bsp_adc.h"
+#include "PID.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/

@@ -22,7 +22,8 @@ void Key_process(void)
 	/* …®√ËKEY1 */
 	if( Key_Scan(KEY1_GPIO_PORT, KEY1_PIN) == KEY_ON)
 	{
-//		set_bldcm_speed(ChannelPulse);
+		SpeedPID.Target = 500;
+		set_bldcm_speed(500);
 		set_bldcm_enable();
 	}
 	
@@ -35,30 +36,33 @@ void Key_process(void)
 	/* …®√ËKEY3 */
 	if( Key_Scan(KEY3_GPIO_PORT, KEY3_PIN) == KEY_ON)
 	{
-		SpeedPID.Target += 500;
-//		ChannelPulse += PWM_MAX_PERIOD_COUNT/10;
-//		
-//		if(ChannelPulse > PWM_MAX_PERIOD_COUNT)
-//			ChannelPulse = PWM_MAX_PERIOD_COUNT;
-//		
-//		set_bldcm_speed(ChannelPulse);
+		SpeedPID.Target += 50;
+		if(SpeedPID.Target > 5000)
+		{
+			SpeedPID.Target = 5000;
+		}
 	}
 	
 	/* …®√ËKEY4 */
 	if( Key_Scan(KEY4_GPIO_PORT, KEY4_PIN) == KEY_ON)
 	{
-		SpeedPID.Target -= 500;
-//		if(ChannelPulse < PWM_MAX_PERIOD_COUNT/10)
-//			ChannelPulse = 0;
-//		else
-//			ChannelPulse -= PWM_MAX_PERIOD_COUNT/10;
-
-//		set_bldcm_speed(ChannelPulse);
+		SpeedPID.Target -= 50;
+		if(SpeedPID.Target < 500)
+		{
+			SpeedPID.Target = 500;
+		}
 	}
 	
 	/* …®√ËKEY5 */
 	if( Key_Scan(KEY5_GPIO_PORT, KEY5_PIN) == KEY_ON)
 	{
-		set_bldcm_direction( (++i % 2) ? MOTOR_FWD : MOTOR_REV);
+		if(get_bldcm_direction() == MOTOR_REV)
+		{
+			set_bldcm_direction(MOTOR_FWD);
+		}
+		else if(get_bldcm_direction() == MOTOR_FWD)
+		{
+			set_bldcm_direction(MOTOR_REV);
+		}
 	}
 }

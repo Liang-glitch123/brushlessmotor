@@ -12,7 +12,7 @@ PID_Factor LocationPID = {
 };
 
 PID_Factor SpeedPID = {
-	.Kp = 2,
+	.Kp = 1,
 	.Ki = 0.1,
 	.Kd = 0,
 };
@@ -41,7 +41,14 @@ void PID_Control(void)
 {
 	if(PIDflag && bldcm_data.is_enable)
 	{
-		SpeedPID.Actual = motor_drive.speed;
+		if(get_bldcm_direction() == MOTOR_REV)
+		{
+			SpeedPID.Actual = -motor_drive.speed;
+		}
+		else
+		{
+			SpeedPID.Actual = motor_drive.speed;
+		}
 		
 		PID_Update(&SpeedPID);
 		
