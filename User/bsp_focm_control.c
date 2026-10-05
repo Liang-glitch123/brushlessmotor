@@ -12,6 +12,9 @@
 #define FOCM_INV_SQRT3   (0.577350269f)
 #define FOCM_POLE_PAIRS  (4.0f)
 #define FOCM_IQ_LIMIT   (0.2f)
+#define FOCM_DEG_TO_RAD  (0.017453292519943f)
+#define FOCM_RAD_TO_DEG  (57.29577951308232f)
+#define FOCM_ANGLE_PERIOD (360.0f)
 
 #define FOCM_IQ_STEP    (2.0f * FOCM_SAMPLE_TIME)
 
@@ -106,6 +109,14 @@ void set_focm_current(float id_ref, float iq_ref)
     focm.iq_ref = focm_limit(iq_ref, -FOCM_IQ_LIMIT, FOCM_IQ_LIMIT);
 }
 
+/** Set the electrical angle in degrees and wrap it to [0, 360). */
+void set_focm_angle(float angle)
+{
+    angle = fmodf(angle, FOCM_ANGLE_PERIOD);
+    if (angle < 0.0f) { angle += FOCM_ANGLE_PERIOD; }
+    focm.theta = angle;
+}
+
 /** 设置机械角速度给定值。 */
 void set_focm_speed(float speed)
 {
@@ -156,6 +167,7 @@ void focm_control_step(float ia, float ib, float ic, float udc)
 {
     float sin_theta;
     float cos_theta;
+    float theta_rad;
     float vd;
     float vq;
     float phase_u;
@@ -173,8 +185,10 @@ void focm_control_step(float ia, float ib, float ic, float udc)
     focm.udc = udc;
     if (!focm.enabled || udc < 5.0f) { return; }
 
-    sin_theta = sinf(focm.theta);
-    cos_theta = cosf(focm.theta);
+    /* focm.theta is stored in degrees; the C trigonometric functions use radians. */
+    theta_rad = focm.theta * FOCM_DEG_TO_RAD;
+    sin_theta = sinf(theta_rad);
+    cos_theta = cosf(theta_rad);
     current_alpha_beta = focm_clarke(ia, ib, ic);
     current_dq = focm_park(current_alpha_beta, sin_theta, cos_theta);
     focm.id = current_dq.d;
@@ -214,10 +228,10 @@ void focm_control_step(float ia, float ib, float ic, float udc)
         if (electrical_speed < target_speed) { electrical_speed = target_speed; }
     }
 
-    /* electrical_speed is mechanical rad/s; convert it to electrical rad/s. */
-    focm.theta += electrical_speed * FOCM_POLE_PAIRS * FOCM_SAMPLE_TIME;
-    if (focm.theta >= 6.283185307f) { focm.theta -= 6.283185307f; }
-    if (focm.theta < 0.0f) { focm.theta += 6.283185307f; }
+    /* electrical_speed is mechanical rad/s; integrate electrical angle in degrees. */
+    focm.theta += electrical_speed * FOCM_POLE_PAIRS * FOCM_SAMPLE_TIME * FOCM_RAD_TO_DEG;
+    if (focm.theta >= FOCM_ANGLE_PERIOD) { focm.theta -= FOCM_ANGLE_PERIOD; }
+    if (focm.theta < 0.0f) { focm.theta += FOCM_ANGLE_PERIOD; }
 }
 
 /** 获取当前FOC状态数据。 */

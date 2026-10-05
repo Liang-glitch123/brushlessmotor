@@ -3,9 +3,9 @@
 <title>Static Call Graph - [BRUSHLESSMOTOR\BRUSHLESSMOTOR.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image BRUSHLESSMOTOR\BRUSHLESSMOTOR.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060750: Last Updated: Mon Oct 05 15:24:06 2026
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060750: Last Updated: Mon Oct 05 21:45:28 2026
 <BR><P>
-<H3>Maximum Stack Usage =        208 bytes + Unknown(Functions without stacksize, Cycles, Untraceable Function Pointers)</H3><H3>
+<H3>Maximum Stack Usage =        216 bytes + Unknown(Functions without stacksize, Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
 TIM1_UP_TIM10_IRQHandler &rArr; HAL_TIM_IRQHandler &rArr; HAL_TIM_PeriodElapsedCallback &rArr; focm_control_step &rArr; focm_svpwm &rArr; __hardfp_fminf &rArr; __ARM_fcmp4
 <P>
@@ -815,8 +815,8 @@ Global Symbols
 <BR><BR>[Stack]<UL><LI>Max Depth = 96<LI>Call Chain = HAL_RCC_ClockConfig &rArr; HAL_RCC_GetSysClockFreq &rArr; __aeabi_uldivmod
 </UL>
 <BR>[Calls]<UL><LI><a href="#[99]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_RCC_GetSysClockFreq
-<LI><a href="#[94]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_InitTick
 <LI><a href="#[8e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GetTick
+<LI><a href="#[94]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_InitTick
 </UL>
 <BR>[Called By]<UL><LI><a href="#[d1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SystemClock_Config
 </UL>
@@ -938,7 +938,7 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[ac]"></a>HAL_TIM_IRQHandler</STRONG> (Thumb, 364 bytes, Stack size 16 bytes, stm32f4xx_hal_tim.o(i.HAL_TIM_IRQHandler))
-<BR><BR>[Stack]<UL><LI>Max Depth = 200<LI>Call Chain = HAL_TIM_IRQHandler &rArr; HAL_TIM_PeriodElapsedCallback &rArr; focm_control_step &rArr; focm_svpwm &rArr; __hardfp_fminf &rArr; __ARM_fcmp4
+<BR><BR>[Stack]<UL><LI>Max Depth = 208<LI>Call Chain = HAL_TIM_IRQHandler &rArr; HAL_TIM_PeriodElapsedCallback &rArr; focm_control_step &rArr; focm_svpwm &rArr; __hardfp_fminf &rArr; __ARM_fcmp4
 </UL>
 <BR>[Calls]<UL><LI><a href="#[b2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_TIM_TriggerCallback
 <LI><a href="#[af]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_TIM_PWM_PulseFinishedCallback
@@ -1003,7 +1003,7 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[b0]"></a>HAL_TIM_PeriodElapsedCallback</STRONG> (Thumb, 104 bytes, Stack size 16 bytes, bsp_adc.o(i.HAL_TIM_PeriodElapsedCallback))
-<BR><BR>[Stack]<UL><LI>Max Depth = 184<LI>Call Chain = HAL_TIM_PeriodElapsedCallback &rArr; focm_control_step &rArr; focm_svpwm &rArr; __hardfp_fminf &rArr; __ARM_fcmp4
+<BR><BR>[Stack]<UL><LI>Max Depth = 192<LI>Call Chain = HAL_TIM_PeriodElapsedCallback &rArr; focm_control_step &rArr; focm_svpwm &rArr; __hardfp_fminf &rArr; __ARM_fcmp4
 </UL>
 <BR>[Calls]<UL><LI><a href="#[be]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;focm_control_step
 <LI><a href="#[bd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;get_vbus_val
@@ -1131,14 +1131,14 @@ Global Symbols
 <BR>[Address Reference Count : 1]<UL><LI> startup_stm32f407xx.o(.text)
 </UL>
 <P><STRONG><a name="[26]"></a>TIM1_UP_TIM10_IRQHandler</STRONG> (Thumb, 10 bytes, Stack size 8 bytes, stm32f4xx_it.o(i.TIM1_UP_TIM10_IRQHandler))
-<BR><BR>[Stack]<UL><LI>Max Depth = 208<LI>Call Chain = TIM1_UP_TIM10_IRQHandler &rArr; HAL_TIM_IRQHandler &rArr; HAL_TIM_PeriodElapsedCallback &rArr; focm_control_step &rArr; focm_svpwm &rArr; __hardfp_fminf &rArr; __ARM_fcmp4
+<BR><BR>[Stack]<UL><LI>Max Depth = 216<LI>Call Chain = TIM1_UP_TIM10_IRQHandler &rArr; HAL_TIM_IRQHandler &rArr; HAL_TIM_PeriodElapsedCallback &rArr; focm_control_step &rArr; focm_svpwm &rArr; __hardfp_fminf &rArr; __ARM_fcmp4
 </UL>
 <BR>[Calls]<UL><LI><a href="#[ac]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_TIM_IRQHandler
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> startup_stm32f407xx.o(RESET)
 </UL>
 <P><STRONG><a name="[2a]"></a>TIM3_IRQHandler</STRONG> (Thumb, 10 bytes, Stack size 8 bytes, stm32f4xx_it.o(i.TIM3_IRQHandler))
-<BR><BR>[Stack]<UL><LI>Max Depth = 208<LI>Call Chain = TIM3_IRQHandler &rArr; HAL_TIM_IRQHandler &rArr; HAL_TIM_PeriodElapsedCallback &rArr; focm_control_step &rArr; focm_svpwm &rArr; __hardfp_fminf &rArr; __ARM_fcmp4
+<BR><BR>[Stack]<UL><LI>Max Depth = 216<LI>Call Chain = TIM3_IRQHandler &rArr; HAL_TIM_IRQHandler &rArr; HAL_TIM_PeriodElapsedCallback &rArr; focm_control_step &rArr; focm_svpwm &rArr; __hardfp_fminf &rArr; __ARM_fcmp4
 </UL>
 <BR>[Calls]<UL><LI><a href="#[ac]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_TIM_IRQHandler
 </UL>
@@ -1255,8 +1255,8 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[6f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[be]"></a>focm_control_step</STRONG> (Thumb, 968 bytes, Stack size 88 bytes, bsp_focm_control.o(i.focm_control_step))
-<BR><BR>[Stack]<UL><LI>Max Depth = 168<LI>Call Chain = focm_control_step &rArr; focm_svpwm &rArr; __hardfp_fminf &rArr; __ARM_fcmp4
+<P><STRONG><a name="[be]"></a>focm_control_step</STRONG> (Thumb, 978 bytes, Stack size 96 bytes, bsp_focm_control.o(i.focm_control_step))
+<BR><BR>[Stack]<UL><LI>Max Depth = 176<LI>Call Chain = focm_control_step &rArr; focm_svpwm &rArr; __hardfp_fminf &rArr; __ARM_fcmp4
 </UL>
 <BR>[Calls]<UL><LI><a href="#[e5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;focm_svpwm
 <LI><a href="#[e1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;focm_park
