@@ -15,6 +15,8 @@
 #define FOCM_DEG_TO_RAD  (0.017453292519943f)
 #define FOCM_RAD_TO_DEG  (57.29577951308232f)
 #define FOCM_ANGLE_PERIOD (360.0f)
+/* Adjust for the Hall sensor's electrical offset after hardware alignment. */
+#define FOCM_HALL_ANGLE_OFFSET (0.0f)
 
 #define FOCM_IQ_STEP    (2.0f * FOCM_SAMPLE_TIME)
 
@@ -35,6 +37,33 @@ static float q_integral;
 static float electrical_speed;
 static float target_speed;
 static float iq_command;
+
+static uint8_t focm_get_hall_state(void)
+{
+    uint8_t state = 0U;
+
+    if (HAL_GPIO_ReadPin(Motor1_EA_HU_GPIO_Port, Motor1_EA_HU_Pin) != GPIO_PIN_RESET) {
+        state |= 0x01U;
+    }
+    if (HAL_GPIO_ReadPin(Motor1_EB_HV_GPIO_Port, Motor1_EB_HV_Pin) != GPIO_PIN_RESET) {
+        state |= 0x02U;
+    }
+    if (HAL_GPIO_ReadPin(Motor1_EZ_HW_GPIO_Port, Motor1_EZ_HW_Pin) != GPIO_PIN_RESET) {
+        state |= 0x04U;
+    }
+    return state;
+}
+
+static void focm_hall_start(void)
+{
+    (void)HAL_TIMEx_HallSensor_Start_IT(&htim3);
+    focm_hall_update(focm_get_hall_state());
+}
+
+static void focm_hall_stop(void)
+{
+    (void)HAL_TIMEx_HallSensor_Stop_IT(&htim3);
+}
 
 /** 数值限幅函数。 */
 static float focm_limit(float value, float minimum, float maximum)
@@ -109,12 +138,43 @@ void set_focm_current(float id_ref, float iq_ref)
     focm.iq_ref = focm_limit(iq_ref, -FOCM_IQ_LIMIT, FOCM_IQ_LIMIT);
 }
 
+/* TIM3 Hall-sensor capture callback. HAL_TIMEx_HallSensor_Start_IT enables CC1. */
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
+{
+    if (htim->Instance == TIM3) {
+        focm_hall_update(focm_get_hall_state());
+    }
+}
+
 /** Set the electrical angle in degrees and wrap it to [0, 360). */
 void set_focm_angle(float angle)
 {
     angle = fmodf(angle, FOCM_ANGLE_PERIOD);
     if (angle < 0.0f) { angle += FOCM_ANGLE_PERIOD; }
     focm.theta = angle;
+}
+
+/*
+ * The table follows the existing six-step commutation table in bsp_motor.c:
+ * 1 -> 3 -> 2 -> 6 -> 4 -> 5. The values are rotor d-axis midpoints. They
+ * are 90 degrees behind the six-step current-vector midpoint so that the
+ * Park transform's positive q axis produces positive torque.
+ */
+void focm_hall_update(uint8_t hall_state)
+{
+    static const float hall_angle[8] = {
+        0.0f,   /* invalid */
+        300.0f, /* U+ W- */
+        60.0f,  /* V+ U- */
+        0.0f,   /* V+ W- */
+        180.0f, /* W+ V- */
+        240.0f, /* U+ V- */
+        120.0f, /* W+ U- */
+        0.0f    /* invalid */
+    };
+
+    if (hall_state == 0U || hall_state >= 7U) { return; }
+    set_focm_angle(hall_angle[hall_state] + FOCM_HALL_ANGLE_OFFSET);
 }
 
 /** 设置机械角速度给定值。 */
@@ -142,12 +202,14 @@ void set_focm_enable(void)
     __HAL_TIM_MOE_ENABLE(&htim1);
     focm.enabled = 1U;
     electrical_speed = 0.0f;
+    focm_hall_start();
 }
 
 /** 禁止驱动器并关闭三相PWM输出。 */
 void set_focm_disable(void)
 {
     focm.enabled = 0U;
+    focm_hall_stop();
     iq_command = 0.0f;
     target_speed = 0.0f;
     electrical_speed = 0.0f;

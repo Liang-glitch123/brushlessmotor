@@ -9,7 +9,7 @@ typedef struct {
 	float ia,ib,ic;
 	float id,iq;
 	float id_ref,iq_ref;
-	float theta; /* electrical angle in degrees, [0, 360) */
+	volatile float theta; /* electrical angle in degrees, [0, 360) */
 	float udc;
 	float duty_u,duty_v,duty_w; 
 	uint8_t enabled; 
@@ -20,6 +20,8 @@ void focm_init(void);
 /** 设置d/q轴电流给定。 */
 void set_focm_current(float id_ref,float iq_ref); 
 void set_focm_angle(float angle); /* angle in degrees */
+/* Correct the electrical angle from a valid three-phase Hall state. */
+void focm_hall_update(uint8_t hall_state);
 /* 设置机械角速度，单位 rad/s；模块内部按极对数换算为电角速度。 */
 /** 设置机械角速度。 */
 void set_focm_speed(float mechanical_speed);
