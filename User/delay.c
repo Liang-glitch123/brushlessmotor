@@ -11,29 +11,29 @@
 
 
 /**
-  * @brief  ³õÊ¼»¯Ê±¼ä´Á
-  * @param  ÎÞ
-  * @retval ÎÞ
-  * @note   Ê¹ÓÃÑÓÊ±º¯ÊýÇ°£¬±ØÐëµ÷ÓÃ±¾º¯Êý
+  * @brief  åˆå§‹åŒ–æ—¶é—´æˆ³
+  * @param  æ— 
+  * @retval æ— 
+  * @note   ä½¿ç”¨å»¶æ—¶å‡½æ•°å‰ï¼Œå¿…é¡»è°ƒç”¨æœ¬å‡½æ•°
   */
 HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
 {
-    /* Ê¹ÄÜDWTÍâÉè */
+    /* ä½¿èƒ½DWTå¤–è®¾ */
     DEM_CR |= (uint32_t)DEM_CR_TRCENA;                
 
-    /* DWT CYCCNT¼Ä´æÆ÷¼ÆÊýÇå0 */
+    /* DWT CYCCNTå¯„å­˜å™¨è®¡æ•°æ¸…0 */
     DWT_CYCCNT = (uint32_t)0u;
 
-    /* Ê¹ÄÜCortex-M DWT CYCCNT¼Ä´æÆ÷ */
+    /* ä½¿èƒ½Cortex-M DWT CYCCNTå¯„å­˜å™¨ */
     DWT_CR |= (uint32_t)DWT_CR_CYCCNTENA;
   
     return HAL_OK;
 }
 
 /**
-  * @brief  ¶ÁÈ¡µ±Ç°Ê±¼ä´Á
-  * @param  ÎÞ
-  * @retval µ±Ç°Ê±¼ä´Á£¬¼´DWT_CYCCNT¼Ä´æÆ÷µÄÖµ
+  * @brief  è¯»å–å½“å‰æ—¶é—´æˆ³
+  * @param  æ— 
+  * @retval å½“å‰æ—¶é—´æˆ³ï¼Œå³DWT_CYCCNTå¯„å­˜å™¨çš„å€¼
   */
 uint32_t CPU_TS_TmrRd(void)
 {        
@@ -41,9 +41,9 @@ uint32_t CPU_TS_TmrRd(void)
 }
 
 /**
-  * @brief  ¶ÁÈ¡µ±Ç°Ê±¼ä´Á
-  * @param  ÎÞ
-  * @retval µ±Ç°Ê±¼ä´Á£¬¼´DWT_CYCCNT¼Ä´æÆ÷µÄÖµ
+  * @brief  è¯»å–å½“å‰æ—¶é—´æˆ³
+  * @param  æ— 
+  * @retval å½“å‰æ—¶é—´æˆ³ï¼Œå³DWT_CYCCNTå¯„å­˜å™¨çš„å€¼
   */
 uint32_t HAL_GetTick(void)
 {        
@@ -52,39 +52,39 @@ uint32_t HAL_GetTick(void)
 
 
 /**
-  * @brief  ²ÉÓÃCPUµÄÄÚ²¿¼ÆÊýÊµÏÖ¾«È·ÑÓÊ±£¬32Î»¼ÆÊýÆ÷
-  * @param  us : ÑÓ³Ù³¤¶È£¬µ¥Î»1 us
-  * @retval ÎÞ
-  * @note   Ê¹ÓÃ±¾º¯ÊýÇ°±ØÐëÏÈµ÷ÓÃCPU_TS_TmrInitº¯ÊýÊ¹ÄÜ¼ÆÊýÆ÷£¬
-            »òÊ¹ÄÜºêCPU_TS_INIT_IN_DELAY_FUNCTION
-            ×î´óÑÓÊ±ÖµÎª8Ãë£¬¼´8*1000*1000
+  * @brief  é‡‡ç”¨CPUçš„å†…éƒ¨è®¡æ•°å®žçŽ°ç²¾ç¡®å»¶æ—¶ï¼Œ32ä½è®¡æ•°å™¨
+  * @param  us : å»¶è¿Ÿé•¿åº¦ï¼Œå•ä½1 us
+  * @retval æ— 
+  * @note   ä½¿ç”¨æœ¬å‡½æ•°å‰å¿…é¡»å…ˆè°ƒç”¨CPU_TS_TmrInitå‡½æ•°ä½¿èƒ½è®¡æ•°å™¨ï¼Œ
+            æˆ–ä½¿èƒ½å®CPU_TS_INIT_IN_DELAY_FUNCTION
+            æœ€å¤§å»¶æ—¶å€¼ä¸º8ç§’ï¼Œå³8*1000*1000
   */
 void CPU_TS_Tmr_Delay_US(uint32_t us)
 {
   uint32_t ticks;
   uint32_t told,tnow,tcnt=0;
 
-  /* ÔÚº¯ÊýÄÚ²¿³õÊ¼»¯Ê±¼ä´Á¼Ä´æÆ÷£¬ */  
+  /* åœ¨å‡½æ•°å†…éƒ¨åˆå§‹åŒ–æ—¶é—´æˆ³å¯„å­˜å™¨ï¼Œ */  
 #if (CPU_TS_INIT_IN_DELAY_FUNCTION)  
-  /* ³õÊ¼»¯Ê±¼ä´Á²¢ÇåÁã */
+  /* åˆå§‹åŒ–æ—¶é—´æˆ³å¹¶æ¸…é›¶ */
   HAL_InitTick(5);
 #endif
   
-  ticks = us * (GET_CPU_ClkFreq() / 1000000);  /* ÐèÒªµÄ½ÚÅÄÊý */      
+  ticks = us * (GET_CPU_ClkFreq() / 1000000);  /* éœ€è¦çš„èŠ‚æ‹æ•° */      
   tcnt = 0;
-  told = (uint32_t)CPU_TS_TmrRd();         /* ¸Õ½øÈëÊ±µÄ¼ÆÊýÆ÷Öµ */
+  told = (uint32_t)CPU_TS_TmrRd();         /* åˆšè¿›å…¥æ—¶çš„è®¡æ•°å™¨å€¼ */
 
   while(1)
   {
     tnow = (uint32_t)CPU_TS_TmrRd();  
     if(tnow != told)
     { 
-        /* 32Î»¼ÆÊýÆ÷ÊÇµÝÔö¼ÆÊýÆ÷ */    
+        /* 32ä½è®¡æ•°å™¨æ˜¯é€’å¢žè®¡æ•°å™¨ */    
       if(tnow > told)
       {
         tcnt += tnow - told;  
       }
-      /* ÖØÐÂ×°ÔØ */
+      /* é‡æ–°è£…è½½ */
       else 
       {
         tcnt += UINT32_MAX - told + tnow; 
@@ -92,7 +92,7 @@ void CPU_TS_Tmr_Delay_US(uint32_t us)
       
       told = tnow;
 
-      /*Ê±¼ä³¬¹ý/µÈÓÚÒªÑÓ³ÙµÄÊ±¼ä,ÔòÍË³ö */
+      /*æ—¶é—´è¶…è¿‡/ç­‰äºŽè¦å»¶è¿Ÿçš„æ—¶é—´,åˆ™é€€å‡º */
       if(tcnt >= ticks)break;
     }  
   }

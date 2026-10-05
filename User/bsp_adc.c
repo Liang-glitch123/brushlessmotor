@@ -92,10 +92,6 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 	      /* 计算电流通道采样的平均值 */
   
 #endif
-
-
-  
-
 }
 
 void ADC_Init(void)
@@ -151,113 +147,54 @@ float get_ntc_t_val(void)
 
   return t;
 }
+
 /**
-  * @brief  获取V相的电流值
+  * @brief  获取三相的电流值
   * @param  无
   * @retval 转换得到的电流值
   */
+static int32_t current_from_accumulator(uint32_t *sum, uint32_t *count)
+{
+  static uint32_t offset_u;
+  static uint32_t offset_v;
+  static uint32_t offset_w;
+  static uint8_t samples_u;
+  static uint8_t samples_v;
+  static uint8_t samples_w;
+  uint32_t mean;
+  int32_t delta;
+  uint32_t *offset;
+  uint8_t *samples;
+
+  if (*count == 0U) return 0;
+  mean = *sum / *count;
+  *sum = 0U;
+  *count = 0U;
+  if (sum == &adc_mean_sum_u) { offset = &offset_u; samples = &samples_u; }
+  else if (sum == &adc_mean_sum_v) { offset = &offset_v; samples = &samples_v; }
+  else { offset = &offset_w; samples = &samples_w; }
+  if (*samples < 32U) { *offset = (*offset * *samples + mean) / (*samples + 1U); (*samples)++; }
+  delta = (int32_t)mean - (int32_t)*offset;
+  return (int32_t)((float)delta * VREF / 4096.0f / CURRENT_SENSE_GAIN / CURRENT_SHUNT_RESISTANCE * 1000.0f);
+}
+
 int32_t get_curr_val_v(void)
 {
-  static uint8_t flag = 0;
-	static uint32_t adc_offset = 0;    // 偏置电压
-  int16_t curr_adc_mean = 0;         // 电流 ACD 采样结果平均值
-  
-  if (adc_mean_count_v == 0) return 0;
-  curr_adc_mean = adc_mean_sum_v / adc_mean_count_v;    // 保存平均值
-  
-
-    adc_mean_count_v = 0;
-    adc_mean_sum_v = 0;
-    
-    if (flag < 17)
-    {
-      adc_offset = curr_adc_mean;    // 多次记录偏置电压，待系统稳定偏置电压才为有效值
-      flag += 1;
-    }
-    if(curr_adc_mean>=adc_offset)
-	{
-		curr_adc_mean -= adc_offset;                     // 减去偏置电压
-	}else
-	{
-		curr_adc_mean=0;
-	}
-
-  float vdc = GET_ADC_VDC_VAL(curr_adc_mean);      // 获取电压值
-  
-  return GET_ADC_CURR_DIFF(vdc);
+  return current_from_accumulator(&adc_mean_sum_v, &adc_mean_count_v);
 }
-/**
-  * @brief  获取U相的电流值
-  * @param  无
-  * @retval 转换得到的电流值
-  */
+
 int32_t get_curr_val_u(void)
 {
-  static uint8_t flag = 0;
-  static uint32_t adc_offset = 0;    // 偏置电压
-  int16_t curr_adc_mean = 0;         // 电流 ACD 采样结果平均值
-  
-  if (adc_mean_count_u == 0) return 0;
-  curr_adc_mean = adc_mean_sum_u / adc_mean_count_u;    // 保存平均值
-  
-
-    adc_mean_count_u = 0;
-    adc_mean_sum_u = 0;
-    
-    if (flag < 17)
-    {
-      adc_offset = curr_adc_mean;    // 多次记录偏置电压，待系统稳定偏置电压才为有效值
-      flag += 1;
-    }
-    if(curr_adc_mean>=adc_offset)
-	{
-		curr_adc_mean -= adc_offset;                     // 减去偏置电压
-	}else
-	{
-		curr_adc_mean=0;
-	}
-
-  float vdc = GET_ADC_VDC_VAL(curr_adc_mean);      // 获取电压值
-  
-  return GET_ADC_CURR_DIFF(vdc);
+  return current_from_accumulator(&adc_mean_sum_u, &adc_mean_count_u);
 }
-/**
-  * @brief  获取W相的电流值
-  * @param  无
-  * @retval 转换得到的电流值
-  */
+
 int32_t get_curr_val_w(void)
 {
-  static uint8_t flag = 0;
-  static uint32_t adc_offset = 0;    // 偏置电压
-  int16_t curr_adc_mean = 0;         // 电流 ACD 采样结果平均值
-  
-  if (adc_mean_count_w == 0) return 0;
-  curr_adc_mean = adc_mean_sum_w / adc_mean_count_w;    // 保存平均值
-  
-
-    adc_mean_count_w = 0;
-    adc_mean_sum_w = 0;
-    
-    if (flag < 17)
-    {
-      adc_offset = curr_adc_mean;    // 多次记录偏置电压，待系统稳定偏置电压才为有效值
-      flag += 1;
-    }
-    if(curr_adc_mean>=adc_offset)
-	{
-		curr_adc_mean -= adc_offset;                     // 减去偏置电压
-	}else
-	{
-		curr_adc_mean=0;
-	}
-
-  float vdc = GET_ADC_VDC_VAL(curr_adc_mean);      // 获取电压值
-  
-  return GET_ADC_CURR_DIFF(vdc);
+  return current_from_accumulator(&adc_mean_sum_w, &adc_mean_count_w);
 }
+
 /**
-  * @brief  获取电源电压值
+  * @brief  获取三相电压值
   * @param  无
   * @retval 转换得到的电压值
   */
@@ -269,17 +206,17 @@ float get_vbus_val(void)
 
 float get_emf_u_val(void)
 {
-  return GET_ADC_VDC_VAL(emf_u_adc_mean);
+  return GET_EMF_VAL(GET_ADC_VDC_VAL(emf_u_adc_mean));
 }
 
 float get_emf_v_val(void)
 {
-  return GET_ADC_VDC_VAL(emf_v_adc_mean);
+  return GET_EMF_VAL(GET_ADC_VDC_VAL(emf_v_adc_mean));
 }
 
 float get_emf_w_val(void)
 {
-  return GET_ADC_VDC_VAL(emf_w_adc_mean);
+  return GET_EMF_VAL(GET_ADC_VDC_VAL(emf_w_adc_mean));
 }
 
 uint8_t flag = 0;
@@ -288,16 +225,13 @@ int32_t current_u = 0;
 int32_t current_w = 0;
 void adc_process(void)
 {
-	/* 三相电流在同一组DMA数据中同步更新。 */
-  if (adc_mean_count_u != 0 && adc_mean_count_v != 0 && adc_mean_count_w != 0)
-  {
-    current_u = (int32_t)((((float)(adc_mean_sum_u / adc_mean_count_u) - 1540.0f) * VREF / 4096.0f) / CURRENT_SENSE_GAIN / CURRENT_SHUNT_RESISTANCE * 1000.0f);
-    current_v = (int32_t)((((float)(adc_mean_sum_v / adc_mean_count_v) - 1540.0f) * VREF / 4096.0f) / CURRENT_SENSE_GAIN / CURRENT_SHUNT_RESISTANCE * 1000.0f);
-    current_w = (int32_t)((((float)(adc_mean_sum_w / adc_mean_count_w) - 1540.0f) * VREF / 4096.0f) / CURRENT_SENSE_GAIN / CURRENT_SHUNT_RESISTANCE * 1000.0f);
-    adc_mean_sum_u = 0; adc_mean_sum_v = 0; adc_mean_sum_w = 0;
-    adc_mean_count_u = 0; adc_mean_count_v = 0; adc_mean_count_w = 0;
-  }  
-  /* 电流值已在ADC DMA回调中同步更新。 */
+  int32_t value;
+  value = get_curr_val_u();
+  if (value != 0) { current_u = value; }
+  value = get_curr_val_v();
+  if (value != 0) { current_v = value; }
+  value = get_curr_val_w();
+  if (value != 0) { current_w = value; }
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)

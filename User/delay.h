@@ -3,7 +3,7 @@
 
 #include "stm32f4xx.h"
 
-/* 获取内核时钟频率 */
+/* 鑾峰彇鍐呮牳鏃堕挓棰戠巼 */
 #define GET_CPU_ClkFreq()       HAL_RCC_GetSysClockFreq()
 #define CPU_MHZ									168
 #define SysClockFreq            (CPU_MHZ*1000000)
