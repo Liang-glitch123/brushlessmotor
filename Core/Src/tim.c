@@ -58,6 +58,8 @@ void MX_TIM1_Init(void)
   {
     Error_Handler();
   }
+  HAL_NVIC_SetPriority(TIM1_UP_TIM10_IRQn, 1, 0);
+  HAL_NVIC_EnableIRQ(TIM1_UP_TIM10_IRQn);
   sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
   if (HAL_TIM_ConfigClockSource(&htim1, &sClockSourceConfig) != HAL_OK)
   {
@@ -91,7 +93,7 @@ void MX_TIM1_Init(void)
   sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
   sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
   sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
-  sBreakDeadTimeConfig.DeadTime = 0;
+  sBreakDeadTimeConfig.DeadTime = 84;
   sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
   sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
   sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
@@ -133,8 +135,8 @@ void MX_TIM3_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN TIM3_Init 2 */
-  HAL_NVIC_SetPriority(TIM3_IRQn, 0, 0);    // ÉèÖÃÖÐ¶ÏÓÅÏÈ¼¶
-  HAL_NVIC_EnableIRQ(TIM3_IRQn);            // Ê¹ÄÜÖÐ¶Ï
+  HAL_NVIC_SetPriority(TIM3_IRQn, 0, 0);    // ï¿½ï¿½ï¿½ï¿½ï¿½Ð¶ï¿½ï¿½ï¿½ï¿½È¼ï¿½
+  HAL_NVIC_EnableIRQ(TIM3_IRQn);            // Ê¹ï¿½ï¿½ï¿½Ð¶ï¿½
   /* USER CODE END TIM3_Init 2 */
 
 }
@@ -210,6 +212,14 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef* timHandle)
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     GPIO_InitStruct.Alternate = GPIO_AF1_TIM1;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+    /* TIM1äº’è¡¥è¾“å‡ºï¼šPB13/PB14/PB15åˆ†åˆ«å¯¹åº”CH1N/CH2N/CH3Nã€‚ */
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+    GPIO_InitStruct.Pin = GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    GPIO_InitStruct.Alternate = GPIO_AF1_TIM1;
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /* USER CODE BEGIN TIM1_MspPostInit 1 */
 

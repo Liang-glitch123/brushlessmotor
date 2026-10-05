@@ -8,7 +8,11 @@
 
 #define GET_ADC_VDC_VAL(val)            ((float)val/4096.0f*VREF)          // 得到电压值
 
-#define GET_ADC_CURR_VAL(val)           (((float)val)/(float)8.0/(float)0.02*(float)1000.0)        // 得到电流值，电压放大8倍，0.02是采样电阻，单位mA。
+#define CURRENT_SENSE_GAIN       (8.0f)
+#define CURRENT_SHUNT_RESISTANCE (0.02f)
+#define CURRENT_SENSE_OFFSET     (1.24f)
+#define GET_ADC_CURR_VAL(val)    ((((float)(val) - CURRENT_SENSE_OFFSET) / CURRENT_SENSE_GAIN / CURRENT_SHUNT_RESISTANCE) * 1000.0f)
+#define GET_ADC_CURR_DIFF(val)    (((float)(val) / CURRENT_SENSE_GAIN / CURRENT_SHUNT_RESISTANCE) * 1000.0f)
 
 #define GET_VBUS_VAL(val)               (((float)val - 1.24f) * 37.0f )      // 获取电压值（测量电压是电源电压的1/37）
 

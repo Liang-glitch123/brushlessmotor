@@ -545,14 +545,9 @@
               <FilePath>..\User\bsp_key.c</FilePath>
             </File>
             <File>
-              <FileName>bsp_bldcm_control.c</FileName>
+              <FileName>bsp_focm_control.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\User\bsp_bldcm_control.c</FilePath>
-            </File>
-            <File>
-              <FileName>bsp_motor.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\User\bsp_motor.c</FilePath>
+              <FilePath>..\User\bsp_focm_control.c</FilePath>
             </File>
             <File>
               <FileName>delay.c</FileName>

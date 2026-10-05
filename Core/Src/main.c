@@ -27,6 +27,7 @@
 /* USER CODE BEGIN Includes */
 #include "bsp_key.h"
 #include "bsp_adc.h"
+#include "bsp_focm_control.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -94,6 +95,7 @@ int main(void)
   MX_ADC1_Init();
   MX_TIM1_Init();
   MX_TIM3_Init();
+  HAL_TIM_Base_Start_IT(&htim1);
   /* USER CODE BEGIN 2 */
   if (HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1) != HAL_OK)
   {
@@ -108,6 +110,7 @@ int main(void)
     Error_Handler();
   }
   ADC_Init();
+  focm_init();
 
   /* USER CODE END 2 */
 

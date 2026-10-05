@@ -1,7 +1,9 @@
 #include "bsp_adc.h"
+#include "bsp_focm_control.h"
 #include <math.h>
 
 extern ADC_HandleTypeDef hadc1;
+
 
 static int16_t adc_buff[ADC_NUM_MAX];    // 电压采集缓冲区
 int16_t vbus_adc_mean = 0;        // 电源电压 ACD 采样结果平均值
@@ -25,7 +27,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
 
 	int32_t adc_mean = 0;
-  HAL_ADC_Stop_DMA(hadc);       // 停止 ADC 采样，处理完一次数据在继续采样
+  /* DMA循环模式持续采样。 */
   
   /* 计算温度通道采样的平均值 */
   for(uint32_t count = 4; count < ADC_NUM_MAX; count+=8)
@@ -84,15 +86,16 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
   }
   
   adc_mean_sum_w += adc_mean / (ADC_NUM_MAX / 8);    // 累加电压
-  adc_mean_count_w++;
-	adc_mean = 0;
+  adc_mean_count_w++;	adc_mean = 0;
 #else
 	  vbus_adc_mean = adc_buff[1];
 	      /* 计算电流通道采样的平均值 */
   
 #endif
+
+
   
-  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_buff, ADC_NUM_MAX);
+
 }
 
 void ADC_Init(void)
@@ -156,9 +159,10 @@ float get_ntc_t_val(void)
 int32_t get_curr_val_v(void)
 {
   static uint8_t flag = 0;
-  static uint32_t adc_offset = 0;    // 偏置电压
+	static uint32_t adc_offset = 0;    // 偏置电压
   int16_t curr_adc_mean = 0;         // 电流 ACD 采样结果平均值
   
+  if (adc_mean_count_v == 0) return 0;
   curr_adc_mean = adc_mean_sum_v / adc_mean_count_v;    // 保存平均值
   
 
@@ -180,7 +184,7 @@ int32_t get_curr_val_v(void)
 
   float vdc = GET_ADC_VDC_VAL(curr_adc_mean);      // 获取电压值
   
-  return GET_ADC_CURR_VAL(vdc);
+  return GET_ADC_CURR_DIFF(vdc);
 }
 /**
   * @brief  获取U相的电流值
@@ -193,6 +197,7 @@ int32_t get_curr_val_u(void)
   static uint32_t adc_offset = 0;    // 偏置电压
   int16_t curr_adc_mean = 0;         // 电流 ACD 采样结果平均值
   
+  if (adc_mean_count_u == 0) return 0;
   curr_adc_mean = adc_mean_sum_u / adc_mean_count_u;    // 保存平均值
   
 
@@ -214,7 +219,7 @@ int32_t get_curr_val_u(void)
 
   float vdc = GET_ADC_VDC_VAL(curr_adc_mean);      // 获取电压值
   
-  return GET_ADC_CURR_VAL(vdc);
+  return GET_ADC_CURR_DIFF(vdc);
 }
 /**
   * @brief  获取W相的电流值
@@ -227,6 +232,7 @@ int32_t get_curr_val_w(void)
   static uint32_t adc_offset = 0;    // 偏置电压
   int16_t curr_adc_mean = 0;         // 电流 ACD 采样结果平均值
   
+  if (adc_mean_count_w == 0) return 0;
   curr_adc_mean = adc_mean_sum_w / adc_mean_count_w;    // 保存平均值
   
 
@@ -248,7 +254,7 @@ int32_t get_curr_val_w(void)
 
   float vdc = GET_ADC_VDC_VAL(curr_adc_mean);      // 获取电压值
   
-  return GET_ADC_CURR_VAL(vdc);
+  return GET_ADC_CURR_DIFF(vdc);
 }
 /**
   * @brief  获取电源电压值
@@ -282,11 +288,25 @@ int32_t current_u = 0;
 int32_t current_w = 0;
 void adc_process(void)
 {
-	if (flag == 1)    // 每50毫秒读取一次温度、电压
-	{
-		flag = 0;      
-		current_v = get_curr_val_v();
-		current_u = get_curr_val_u();
-		current_w = get_curr_val_w();
-	}
+	/* 三相电流在同一组DMA数据中同步更新。 */
+  if (adc_mean_count_u != 0 && adc_mean_count_v != 0 && adc_mean_count_w != 0)
+  {
+    current_u = (int32_t)((((float)(adc_mean_sum_u / adc_mean_count_u) - 1540.0f) * VREF / 4096.0f) / CURRENT_SENSE_GAIN / CURRENT_SHUNT_RESISTANCE * 1000.0f);
+    current_v = (int32_t)((((float)(adc_mean_sum_v / adc_mean_count_v) - 1540.0f) * VREF / 4096.0f) / CURRENT_SENSE_GAIN / CURRENT_SHUNT_RESISTANCE * 1000.0f);
+    current_w = (int32_t)((((float)(adc_mean_sum_w / adc_mean_count_w) - 1540.0f) * VREF / 4096.0f) / CURRENT_SENSE_GAIN / CURRENT_SHUNT_RESISTANCE * 1000.0f);
+    adc_mean_sum_u = 0; adc_mean_sum_v = 0; adc_mean_sum_w = 0;
+    adc_mean_count_u = 0; adc_mean_count_v = 0; adc_mean_count_w = 0;
+  }  
+  /* 电流值已在ADC DMA回调中同步更新。 */
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  if (htim->Instance == TIM1)
+  {
+    focm_control_step((float)current_u * 0.001f,
+                      (float)current_v * 0.001f,
+                      (float)current_w * 0.001f,
+                      get_vbus_val());
+  }
 }

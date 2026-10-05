@@ -1,12 +1,12 @@
 #include "bsp_key.h"
-#include "bsp_bldcm_control.h"
+#include "bsp_focm_control.h"
 
 uint8_t Key_Scan(GPIO_TypeDef* GPIOx,uint16_t GPIO_Pin)
 {			
-	/*¼ì²âÊÇ·ñÓÐ°´¼ü°´ÏÂ */
+	/*ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½Ð°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ */
 	if(HAL_GPIO_ReadPin(GPIOx,GPIO_Pin) == KEY_ON )  
 	{	 
-		/*µÈ´ý°´¼üÊÍ·Å */
+		/*ï¿½È´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í·ï¿½ */
 		while(HAL_GPIO_ReadPin(GPIOx,GPIO_Pin) == KEY_ON);   
 		return 	KEY_ON;	 
 	}
@@ -14,48 +14,47 @@ uint8_t Key_Scan(GPIO_TypeDef* GPIOx,uint16_t GPIO_Pin)
 		return KEY_OFF;
 }
 
-__IO uint16_t ChannelPulse = PWM_MAX_PERIOD_COUNT/10;
+static float focm_speed = 10.0f;
 uint8_t i = 0;
 void Key_process(void)
 {
-	/* É¨ÃèKEY1 */
+	/* É¨ï¿½ï¿½KEY1 */
 	if( Key_Scan(KEY1_GPIO_PORT, KEY1_PIN) == KEY_ON)
 	{
-		set_bldcm_speed(ChannelPulse);
-		set_bldcm_enable();
+		set_focm_current(0.0f, 1.0f);
+        set_focm_speed(focm_speed);
+		set_focm_enable();
 	}
 	
-	/* É¨ÃèKEY2 */
+	/* É¨ï¿½ï¿½KEY2 */
 	if( Key_Scan(KEY2_GPIO_PORT, KEY2_PIN) == KEY_ON)
 	{
-		set_bldcm_disable();
+		set_focm_disable();
 	}
 	
-	/* É¨ÃèKEY3 */
+	/* É¨ï¿½ï¿½KEY3 */
 	if( Key_Scan(KEY3_GPIO_PORT, KEY3_PIN) == KEY_ON)
 	{
-		ChannelPulse += PWM_MAX_PERIOD_COUNT/10;
+		focm_speed += 1.0f;
+        if (focm_speed > 30.0f) focm_speed = 30.0f;
 		
-		if(ChannelPulse > PWM_MAX_PERIOD_COUNT)
-			ChannelPulse = PWM_MAX_PERIOD_COUNT;
-		
-		set_bldcm_speed(ChannelPulse);
+		set_focm_current(0.0f, 1.0f);
+        set_focm_speed(focm_speed);
 	}
 	
-	/* É¨ÃèKEY4 */
+	/* É¨ï¿½ï¿½KEY4 */
 	if( Key_Scan(KEY4_GPIO_PORT, KEY4_PIN) == KEY_ON)
 	{
-		if(ChannelPulse < PWM_MAX_PERIOD_COUNT/10)
-			ChannelPulse = 0;
-		else
-			ChannelPulse -= PWM_MAX_PERIOD_COUNT/10;
+		focm_speed -= 1.0f;
+        if (focm_speed < 0.0f) focm_speed = 0.0f;
 
-		set_bldcm_speed(ChannelPulse);
+		set_focm_current(0.0f, 1.0f);
+        set_focm_speed(focm_speed);
 	}
 	
-	/* É¨ÃèKEY5 */
+	/* É¨ï¿½ï¿½KEY5 */
 	if( Key_Scan(KEY5_GPIO_PORT, KEY5_PIN) == KEY_ON)
 	{
-		set_bldcm_direction( (++i % 2) ? MOTOR_FWD : MOTOR_REV);
+		focm_reverse();
 	}
 }
