@@ -7,14 +7,14 @@
 #define FOCM_PI_KI       (1282.8f)
 #define FOCM_VOLTAGE_MAX (2.0f)
 
-#define FOCM_SAMPLE_TIME (0.0000667f)
-#define FOCM_SQRT3_HALF  (0.8660254f)
-#define FOCM_INV_SQRT3   (0.577350269f)
-#define FOCM_POLE_PAIRS  (4.0f)
-#define FOCM_IQ_LIMIT   (0.2f)
-#define FOCM_DEG_TO_RAD  (0.017453292519943f)
-#define FOCM_RAD_TO_DEG  (57.29577951308232f)
-#define FOCM_ANGLE_PERIOD (360.0f)
+#define FOCM_SAMPLE_TIME (0.0000667f)       	// 控制周期 Ts = 66.7 us
+#define FOCM_SQRT3_HALF  (0.8660254f)       	// √3/2
+#define FOCM_INV_SQRT3   (0.577350269f)     	// 1/√3 = √3/3
+#define FOCM_POLE_PAIRS  (4.0f)             	// 电机极对数 p = 4
+#define FOCM_IQ_LIMIT    (0.2f)             	// q 轴电流给定限幅：|iq_ref| <= 0.2
+#define FOCM_DEG_TO_RAD  (0.017453292519943f) // π/180
+#define FOCM_RAD_TO_DEG  (57.29577951308232f) // 180/π
+#define FOCM_ANGLE_PERIOD (360.0f)          	// 电角度周期：360° = 2π rad
 /* Adjust for the Hall sensor's electrical offset after hardware alignment. */
 #define FOCM_HALL_ANGLE_OFFSET (0.0f)
 
@@ -40,6 +40,7 @@ static float iq_command;
 
 static uint8_t focm_get_hall_state(void)
 {
+		/* 霍尔状态编码：H = HU + 2*HV + 4*HW，HU/HV/HW 为 0 或 1。 */
     uint8_t state = 0U;
 
     if (HAL_GPIO_ReadPin(Motor1_EA_HU_GPIO_Port, Motor1_EA_HU_Pin) != GPIO_PIN_RESET) {
@@ -73,7 +74,13 @@ static float focm_limit(float value, float minimum, float maximum)
     return value;
 }
 
-/** Clarke变换：三相电流转换为alpha-beta电流。 */
+/**
+ * Clarke 变换：三相电流转换为 alpha-beta 电流。
+ *
+ * 公式：
+ *   alpha = (2*ia - ib - ic) / 3
+ *   beta  = (ib - ic) / √3
+ */
 static focm_alpha_beta_t focm_clarke(float ia, float ib, float ic)
 {
     focm_alpha_beta_t result;
@@ -82,7 +89,13 @@ static focm_alpha_beta_t focm_clarke(float ia, float ib, float ic)
     return result;
 }
 
-/** Park变换：alpha-beta电流转换为dq电流。 */
+/**
+ * Park 变换：alpha-beta 电流转换为 dq 电流。
+ *
+ * 公式（θ 为电角度）： 
+ *   d = alpha*cos(θ) + beta*sin(θ)
+ *   q = -alpha*sin(θ) + beta*cos(θ)
+ */
 static focm_dq_t focm_park(focm_alpha_beta_t alpha_beta, float sin_theta, float cos_theta)
 {
     focm_dq_t result;
@@ -91,7 +104,13 @@ static focm_dq_t focm_park(focm_alpha_beta_t alpha_beta, float sin_theta, float 
     return result;
 }
 
-/** 反Park变换：dq电压转换为alpha-beta电压。 */
+/**
+ * 反 Park 变换：dq 电压转换为 alpha-beta 电压。
+ *
+ * 公式（θ 为电角度）：
+ *   alpha = d*cos(θ) - q*sin(θ)
+ *   beta  = d*sin(θ) + q*cos(θ)
+ */
 static focm_alpha_beta_t focm_inverse_park(focm_dq_t dq, float sin_theta, float cos_theta)
 {
     focm_alpha_beta_t result;
@@ -100,7 +119,14 @@ static focm_alpha_beta_t focm_inverse_park(focm_dq_t dq, float sin_theta, float 
     return result;
 }
 
-/** 反Clarke变换：alpha-beta电压转换为三相电压。 */
+/**
+ * 反 Clarke 变换：alpha-beta 电压转换为三相电压。
+ *
+ * 公式：
+ *   u = alpha
+ *   v = -alpha/2 + √3*beta/2
+ *   w = -alpha/2 - √3*beta/2
+ */
 static void focm_inverse_clarke(focm_alpha_beta_t alpha_beta, float *u, float *v, float *w)
 {
     *u = alpha_beta.alpha;
@@ -108,7 +134,15 @@ static void focm_inverse_clarke(focm_alpha_beta_t alpha_beta, float *u, float *v
     *w = -0.5f * alpha_beta.alpha - FOCM_SQRT3_HALF * alpha_beta.beta;
 }
 
-/** SVPWM计算：三相电压转换为PWM占空比。 */
+/**
+ * SVPWM 计算：三相电压转换为 PWM 占空比。
+ *
+ * 先注入零序电压，将三相参考量平移到母线范围的中间：
+ *   umax = max(u, v, w)
+ *   umin = min(u, v, w)
+ *   u0   = (umax + umin) / 2
+ *   d_x  = limit(1/2 + (x - u0)/Udc, 0.02, 0.98), x in {u, v, w}
+ */
 static void focm_svpwm(float u, float v, float w, float udc, float *du, float *dv, float *dw)
 {
     float maximum = fmaxf(u, fmaxf(v, w));
@@ -131,7 +165,12 @@ void focm_init(void)
     set_focm_disable();
 }
 
-/** 设置d轴和q轴电流给定值。 */
+/**
+ * 设置 d 轴和 q 轴电流给定值。
+ *
+ * 公式：id_ref <- id_ref，
+ *       iq_ref <- limit(iq_ref, -I_q_max, I_q_max)。
+ */
 void set_focm_current(float id_ref, float iq_ref)
 {
     focm.id_ref = id_ref;
@@ -146,7 +185,11 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
     }
 }
 
-/** Set the electrical angle in degrees and wrap it to [0, 360). */
+/**
+ * 设置电角度（单位：度），并将其归一化到 [0, 360)。
+ *
+ * 公式：theta <- angle mod 360；若 theta < 0，则 theta <- theta + 360。
+ */
 void set_focm_angle(float angle)
 {
     angle = fmodf(angle, FOCM_ANGLE_PERIOD);
@@ -224,7 +267,14 @@ void set_focm_disable(void)
     HAL_GPIO_WritePin(Motor1_SD_GPIO_Port, Motor1_SD_Pin, GPIO_PIN_RESET);
 }
 
-/** 执行一次FOC控制周期并更新三相PWM比较值。 */
+/**
+ * 执行一次 FOC 控制周期并更新三相 PWM 比较值。
+ *
+ * 速度斜坡和电角度积分：
+ *   omega_m[k+1] = omega_m[k] + limit(omega_m_ref - omega_m[k], -10*Ts, 10*Ts)
+ *   theta[k+1] = wrap360(theta[k] + omega_m[k+1]*p*Ts*180/pi)
+ * 其中 p 为极对数；omega_m 和 electrical_speed 均按机械角速度（rad/s）处理。
+ */
 void focm_control_step(float ia, float ib, float ic, float udc)
 {
     float sin_theta;
