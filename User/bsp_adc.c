@@ -1,246 +1,218 @@
 #include "bsp_adc.h"
+#include "adc.h"
 #include "bsp_focm_control.h"
-#include <math.h>
 
-extern ADC_HandleTypeDef hadc1;
+#define ADC_INJECTED_CHANNEL_COUNT      3U
 
+static uint16_t adc_buff[ADC_NUM_MAX];
+static volatile uint16_t ibus_adc_raw;
+static volatile uint16_t vbus_adc_mean;
+static volatile int32_t phase_current_ma[2][ADC_INJECTED_CHANNEL_COUNT];
+static volatile uint16_t phase_emf_adc[2][ADC_INJECTED_CHANNEL_COUNT];
+static volatile uint8_t phase_current_buffer;
+static volatile uint8_t phase_current_ready;
 
-static int16_t adc_buff[ADC_NUM_MAX];    // 电压采集缓冲区
-int16_t vbus_adc_mean = 0;        // 电源电压 ACD 采样结果平均值
-int16_t emf_u_adc_mean = 0;
-int16_t emf_v_adc_mean = 0;
-int16_t emf_w_adc_mean = 0;
-uint32_t adc_mean_t = 0;        // 平均值累加
-uint32_t adc_mean_sum_u = 0;        // 平均值累加
-uint32_t adc_mean_sum_v = 0;        // 平均值累加
-uint32_t adc_mean_sum_w = 0;        // 平均值累加
-static uint32_t adc_mean_count_u = 0;      // 累加计数
-static uint32_t adc_mean_count_v = 0;      // 累加计数
-static uint32_t adc_mean_count_w = 0;      // 累加计数
+uint8_t flag = 0U;
+volatile int32_t current_u = 0;
+volatile int32_t current_v = 0;
+volatile int32_t current_w = 0;
 
-/**
-  * @brief  常规转换在非阻塞模式下完成回调
-  * @param  hadc: ADC  句柄.
-  * @retval 无
-  */
-void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
+static void read_phase_currents(int32_t *current_u_ma,
+                                int32_t *current_v_ma,
+                                int32_t *current_w_ma)
 {
+  uint8_t buffer = phase_current_buffer;
+  *current_u_ma = phase_current_ma[buffer][0];
+  *current_v_ma = phase_current_ma[buffer][1];
+  *current_w_ma = phase_current_ma[buffer][2];
+}
 
-	int32_t adc_mean = 0;
-  /* DMA循环模式持续采样。 */
-  
-  /* 计算温度通道采样的平均值 */
-  for(uint32_t count = 4; count < ADC_NUM_MAX; count+=8)
-  {
-    adc_mean += (int32_t)adc_buff[count];
-  }
-	  adc_mean_t = adc_mean / (ADC_NUM_MAX / 8);    // 保存平均值
-		adc_mean = 0;
+static void read_phase_emf(uint16_t *emf_u_raw,
+                           uint16_t *emf_v_raw,
+                           uint16_t *emf_w_raw)
+{
+  uint8_t buffer = phase_current_buffer;
+  *emf_u_raw = phase_emf_adc[buffer][0];
+  *emf_v_raw = phase_emf_adc[buffer][1];
+  *emf_w_raw = phase_emf_adc[buffer][2];
+}
 
-  
-  /* 计算电压通道采样的平均值 */
-  for(uint32_t count = 3; count < ADC_NUM_MAX; count+=8)
-  {
-    adc_mean += (int32_t)adc_buff[count];
-  }
-  
-  vbus_adc_mean = adc_mean / (ADC_NUM_MAX / 8);    // 保存平均值
-  adc_mean = 0;
+static void process_regular_block(const uint16_t *block, uint32_t sample_count)
+{
+  uint32_t sum[ADC_REGULAR_CHANNEL_COUNT] = {0U};
+  uint32_t frame_count = sample_count / ADC_REGULAR_CHANNEL_COUNT;
+  uint32_t frame;
 
-  /* ADC_IN10/IN12/IN13：Motor1_EMFU/EMFV/EMFW */
-  for(uint32_t count = 5; count < ADC_NUM_MAX; count += 8)
-    adc_mean += (int32_t)adc_buff[count];
-  emf_u_adc_mean = adc_mean / (ADC_NUM_MAX / 8);
-  adc_mean = 0;
-  for(uint32_t count = 6; count < ADC_NUM_MAX; count += 8)
-    adc_mean += (int32_t)adc_buff[count];
-  emf_v_adc_mean = adc_mean / (ADC_NUM_MAX / 8);
-  adc_mean = 0;
-  for(uint32_t count = 7; count < ADC_NUM_MAX; count += 8)
-    adc_mean += (int32_t)adc_buff[count];
-  emf_w_adc_mean = adc_mean / (ADC_NUM_MAX / 8);
-  adc_mean = 0;
-#if 1 
-		  /* 计算电流通道采样的平均值 */
-   for(uint32_t count = 0; count < ADC_NUM_MAX; count+=8)
+  for (frame = 0U; frame < frame_count; frame++)
   {
-    adc_mean += (uint32_t)adc_buff[count];
+    uint32_t base = frame * ADC_REGULAR_CHANNEL_COUNT;
+    uint32_t rank;
+    for (rank = 0U; rank < ADC_REGULAR_CHANNEL_COUNT; rank++)
+    {
+      sum[rank] += block[base + rank];
+    }
   }
-  
-  adc_mean_sum_u += adc_mean / (ADC_NUM_MAX / 8);    // 累加电压
-  adc_mean_count_u++;
-	  adc_mean = 0;
-			  /* 计算电流通道采样的平均值 */
-   for(uint32_t count = 1; count < ADC_NUM_MAX; count+=8)
+
+  vbus_adc_mean = (uint16_t)(sum[0] / frame_count);
+  ibus_adc_raw = (uint16_t)(sum[1] / frame_count);
+}
+
+void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef *hadc)
+{
+  if (hadc->Instance == ADC1)
   {
-    adc_mean += (uint32_t)adc_buff[count];
+    process_regular_block(adc_buff, ADC_NUM_MAX / 2U);
   }
-  
-  adc_mean_sum_v += adc_mean / (ADC_NUM_MAX / 8);    // 累加电压
-  adc_mean_count_v++;
-		adc_mean = 0;
-			  /* 计算电流通道采样的平均值 */
-   for(uint32_t count = 2; count < ADC_NUM_MAX; count+=8)
+}
+
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
+{
+  if (hadc->Instance == ADC1)
   {
-    adc_mean += (uint32_t)adc_buff[count];
+    process_regular_block(&adc_buff[ADC_NUM_MAX / 2U], ADC_NUM_MAX / 2U);
   }
-  
-  adc_mean_sum_w += adc_mean / (ADC_NUM_MAX / 8);    // 累加电压
-  adc_mean_count_w++;	adc_mean = 0;
-#else
-	  vbus_adc_mean = adc_buff[1];
-	      /* 计算电流通道采样的平均值 */
-  
-#endif
+}
+
+static void capture_injected_samples(void)
+{
+  uint8_t next_buffer;
+  uint32_t raw_u;
+  uint32_t raw_v;
+  uint32_t raw_w;
+  uint32_t raw_emf_u;
+  uint32_t raw_emf_v;
+  uint32_t raw_emf_w;
+
+  raw_u = HAL_ADCEx_InjectedGetValue(&hadc1, ADC_INJECTED_RANK_1);
+  raw_v = HAL_ADCEx_InjectedGetValue(&hadc1, ADC_INJECTED_RANK_2);
+  raw_w = HAL_ADCEx_InjectedGetValue(&hadc1, ADC_INJECTED_RANK_3);
+  raw_emf_u = HAL_ADCEx_InjectedGetValue(&hadc2, ADC_INJECTED_RANK_1);
+  raw_emf_v = HAL_ADCEx_InjectedGetValue(&hadc2, ADC_INJECTED_RANK_2);
+  raw_emf_w = HAL_ADCEx_InjectedGetValue(&hadc2, ADC_INJECTED_RANK_3);
+
+  next_buffer = (uint8_t)(phase_current_buffer ^ 1U);
+  phase_current_ma[next_buffer][0] = (int32_t)GET_ADC_CURR(raw_u);
+  phase_current_ma[next_buffer][1] = (int32_t)GET_ADC_CURR(raw_v);
+  phase_current_ma[next_buffer][2] = (int32_t)GET_ADC_CURR(raw_w);
+  phase_emf_adc[next_buffer][0] = (uint16_t)raw_emf_u;
+  phase_emf_adc[next_buffer][1] = (uint16_t)raw_emf_v;
+  phase_emf_adc[next_buffer][2] = (uint16_t)raw_emf_w;
+  phase_current_buffer = next_buffer;
+  phase_current_ready = 1U;
+  __HAL_ADC_CLEAR_FLAG(&hadc1, ADC_FLAG_JEOC);
+  __HAL_ADC_CLEAR_FLAG(&hadc2, ADC_FLAG_JEOC);
 }
 
 void ADC_Init(void)
 {
-  HAL_ADC_Start_DMA(&hadc1, (uint32_t *)adc_buff, ADC_NUM_MAX);
-}
+  if (HAL_ADC_Start_DMA(&hadc1, (uint32_t *)(void *)adc_buff, ADC_NUM_MAX) != HAL_OK)
+  {
+    Error_Handler();
+  }
 
-/**
-  * @brief  获取温度传感器端的电压值
-  * @param  无
-  * @retval 转换得到的电压值
-  */
-float get_ntc_v_val(void)
-{
-  float vdc = GET_ADC_VDC_VAL(adc_mean_t);      // 获取电压值
-  
-  return vdc;
-}
+  if (HAL_ADCEx_InjectedStart(&hadc1) != HAL_OK)
+  {
+    Error_Handler();
+  }
 
-/**
-  * @brief  获取温度传感器端的电阻值
-  * @param  无
-  * @retval 转换得到的电阻值
-  */
-float get_ntc_r_val(void)
-{
-  float r = 0;
-  float vdc = get_ntc_v_val();
-  
-  r = (VREF - vdc) / (vdc / (float)4700.0);
-  
-  return r;
-}
+  if (HAL_ADCEx_InjectedStart(&hadc2) != HAL_OK)
+  {
+    Error_Handler();
+  }
 
-/**
-  * @brief  获取温度传感器的温度
-  * @param  无
-  * @retval 转换得到的温度，单位：（℃）
-  */
-float get_ntc_t_val(void)
-{
-  float t = 0;             // 测量温度
-  float Rt = 0;            // 测量电阻
-  float Ka = 273.15;       // 0℃ 时对应的温度（开尔文）
-  float R25 = 10000.0;     // 25℃ 电阻值
-  float T25 = Ka + 25;     // 25℃ 时对应的温度（开尔文）
-  float B = 3950.0;        /* B-常数：B = ln(R25 / Rt) / (1 / T – 1 / T25)，
-                             其中 T = 25 + 273.15 */
-
-  Rt = get_ntc_r_val();    // 获取当前电阻值
-
-  t = B * T25 / (B + log(Rt / R25) * T25) - Ka ;    // 使用公式计算
-
-  return t;
-}
-
-/**
-  * @brief  获取三相的电流值
-  * @param  无
-  * @retval 转换得到的电流值
-  */
-static int32_t current_from_accumulator(uint32_t *sum, uint32_t *count)
-{
-  static uint32_t offset_u;
-  static uint32_t offset_v;
-  static uint32_t offset_w;
-  static uint8_t samples_u;
-  static uint8_t samples_v;
-  static uint8_t samples_w;
-  uint32_t mean;
-  int32_t delta;
-  uint32_t *offset;
-  uint8_t *samples;
-
-  if (*count == 0U) return 0;
-  mean = *sum / *count;
-  *sum = 0U;
-  *count = 0U;
-  if (sum == &adc_mean_sum_u) { offset = &offset_u; samples = &samples_u; }
-  else if (sum == &adc_mean_sum_v) { offset = &offset_v; samples = &samples_v; }
-  else { offset = &offset_w; samples = &samples_w; }
-  if (*samples < 32U) { *offset = (*offset * *samples + mean) / (*samples + 1U); (*samples)++; }
-  delta = (int32_t)mean - (int32_t)*offset;
-  return (int32_t)((float)delta * VREF / 4096.0f / CURRENT_SENSE_GAIN / CURRENT_SHUNT_RESISTANCE * 1000.0f);
-}
-
-int32_t get_curr_val_v(void)
-{
-  return current_from_accumulator(&adc_mean_sum_v, &adc_mean_count_v);
 }
 
 int32_t get_curr_val_u(void)
 {
-  return current_from_accumulator(&adc_mean_sum_u, &adc_mean_count_u);
+  return phase_current_ma[phase_current_buffer][0];
+}
+
+int32_t get_curr_val_v(void)
+{
+  return phase_current_ma[phase_current_buffer][1];
 }
 
 int32_t get_curr_val_w(void)
 {
-  return current_from_accumulator(&adc_mean_sum_w, &adc_mean_count_w);
+  return phase_current_ma[phase_current_buffer][2];
 }
 
-/**
-  * @brief  获取三相电压值
-  * @param  无
-  * @retval 转换得到的电压值
-  */
+uint16_t get_ibus_adc_raw(void)
+{
+  return ibus_adc_raw;
+}
+
 float get_vbus_val(void)
 {
-  float vdc = GET_ADC_VDC_VAL(vbus_adc_mean);      // 获取电压值
-  return GET_VBUS_VAL(vdc);
+  uint16_t raw = vbus_adc_mean;
+  return GET_VBUS_VAL(raw);
 }
 
 float get_emf_u_val(void)
 {
-  return GET_EMF_VAL(GET_ADC_VDC_VAL(emf_u_adc_mean));
+  uint16_t raw;
+  uint16_t raw_v;
+  uint16_t raw_w;
+  read_phase_emf(&raw, &raw_v, &raw_w);
+  return GET_EMF_VAL(raw);
 }
 
 float get_emf_v_val(void)
 {
-  return GET_EMF_VAL(GET_ADC_VDC_VAL(emf_v_adc_mean));
+  uint16_t raw_u;
+  uint16_t raw;
+  uint16_t raw_w;
+  read_phase_emf(&raw_u, &raw, &raw_w);
+  return GET_EMF_VAL(raw);
 }
 
 float get_emf_w_val(void)
 {
-  return GET_EMF_VAL(GET_ADC_VDC_VAL(emf_w_adc_mean));
+  uint16_t raw_u;
+  uint16_t raw_v;
+  uint16_t raw;
+  read_phase_emf(&raw_u, &raw_v, &raw);
+  return GET_EMF_VAL(raw);
 }
 
-uint8_t flag = 0;
-int32_t current_v = 0;
-int32_t current_u = 0;
-int32_t current_w = 0;
 void adc_process(void)
 {
-  int32_t value;
-  value = get_curr_val_u();
-  if (value != 0) { current_u = value; }
-  value = get_curr_val_v();
-  if (value != 0) { current_v = value; }
-  value = get_curr_val_w();
-  if (value != 0) { current_w = value; }
+  int32_t current_u_ma;
+  int32_t current_v_ma;
+  int32_t current_w_ma;
+
+  if (phase_current_ready != 0U)
+  {
+    read_phase_currents(&current_u_ma, &current_v_ma, &current_w_ma);
+    current_u = current_u_ma;
+    current_v = current_v_ma;
+    current_w = current_w_ma;
+  }
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
+  int32_t current_u_ma;
+  int32_t current_v_ma;
+  int32_t current_w_ma;
+
   if (htim->Instance == TIM1)
   {
-    focm_control_step((float)current_u * 0.001f,
-                      (float)current_v * 0.001f,
-                      (float)current_w * 0.001f,
-                      get_vbus_val());
+    /* CC4 samples both ADC injected groups at mid-period; consume the
+       completed current and phase-voltage ranks at the next update. */
+//    if ((__HAL_ADC_GET_FLAG(&hadc1, ADC_FLAG_JEOC) != RESET) &&
+//        (__HAL_ADC_GET_FLAG(&hadc2, ADC_FLAG_JEOC) != RESET))
+//    {
+//      capture_injected_samples();
+//    }
+
+//    if (phase_current_ready != 0U)
+//    {
+      read_phase_currents(&current_u_ma, &current_v_ma, &current_w_ma);
+		focm_control_step((float)current_u_ma * 0.001f,
+											(float)current_v_ma * 0.001f,
+											(float)current_w_ma * 0.001f,
+											get_vbus_val());
+//    }
   }
 }

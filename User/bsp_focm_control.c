@@ -58,7 +58,7 @@ static uint8_t focm_get_hall_state(void)
 static void focm_hall_start(void)
 {
     (void)HAL_TIMEx_HallSensor_Start_IT(&htim3);
-    focm_hall_update(focm_get_hall_state());
+//    focm_hall_update(focm_get_hall_state());
 }
 
 static void focm_hall_stop(void)
@@ -181,7 +181,7 @@ void set_focm_current(float id_ref, float iq_ref)
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 {
     if (htim->Instance == TIM3) {
-        focm_hall_update(focm_get_hall_state());
+//        focm_hall_update(focm_get_hall_state());
     }
 }
 
@@ -275,13 +275,15 @@ void set_focm_disable(void)
  *   theta[k+1] = wrap360(theta[k] + omega_m[k+1]*p*Ts*180/pi)
  * 其中 p 为极对数；omega_m 和 electrical_speed 均按机械角速度（rad/s）处理。
  */
+
+    float vd;
+    float vq;
+    float theta_rad;
+float angleChange = 0;
 void focm_control_step(float ia, float ib, float ic, float udc)
 {
     float sin_theta;
     float cos_theta;
-    float theta_rad;
-    float vd;
-    float vq;
     float phase_u;
     float phase_v;
     float phase_w;
@@ -298,6 +300,11 @@ void focm_control_step(float ia, float ib, float ic, float udc)
     if (!focm.enabled || udc < 5.0f) { return; }
 
     /* focm.theta is stored in degrees; the C trigonometric functions use radians. */
+		focm.theta += angleChange;
+		if(focm.theta >= 360.0f)
+		{
+			focm.theta = 0.0f;
+		}
     theta_rad = focm.theta * FOCM_DEG_TO_RAD;
     sin_theta = sinf(theta_rad);
     cos_theta = cosf(theta_rad);
@@ -315,10 +322,10 @@ void focm_control_step(float ia, float ib, float ic, float udc)
         if (iq_command < focm.iq_ref) { iq_command = focm.iq_ref; }
     }
 
-    vd = focm_limit(FOCM_PI_KP * (focm.id_ref - focm.id) + d_integral, -FOCM_VOLTAGE_MAX, FOCM_VOLTAGE_MAX);
-    vq = focm_limit(FOCM_PI_KP * (iq_command - focm.iq) + q_integral, -FOCM_VOLTAGE_MAX, FOCM_VOLTAGE_MAX);
-    d_integral = focm_limit(d_integral + FOCM_PI_KI * (focm.id_ref - focm.id) * FOCM_SAMPLE_TIME, -FOCM_VOLTAGE_MAX, FOCM_VOLTAGE_MAX);
-    q_integral = focm_limit(q_integral + FOCM_PI_KI * (iq_command - focm.iq) * FOCM_SAMPLE_TIME, -FOCM_VOLTAGE_MAX, FOCM_VOLTAGE_MAX);
+//    vd = focm_limit(FOCM_PI_KP * (focm.id_ref - focm.id) + d_integral, -FOCM_VOLTAGE_MAX, FOCM_VOLTAGE_MAX);
+//    vq = focm_limit(FOCM_PI_KP * (iq_command - focm.iq) + q_integral, -FOCM_VOLTAGE_MAX, FOCM_VOLTAGE_MAX);
+//    d_integral = focm_limit(d_integral + FOCM_PI_KI * (focm.id_ref - focm.id) * FOCM_SAMPLE_TIME, -FOCM_VOLTAGE_MAX, FOCM_VOLTAGE_MAX);
+//    q_integral = focm_limit(q_integral + FOCM_PI_KI * (iq_command - focm.iq) * FOCM_SAMPLE_TIME, -FOCM_VOLTAGE_MAX, FOCM_VOLTAGE_MAX);
 
     voltage_dq.d = vd;
     voltage_dq.q = vq;
@@ -331,19 +338,19 @@ void focm_control_step(float ia, float ib, float ic, float udc)
     __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, (uint32_t)(focm.duty_v * pwm_period));
     __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, (uint32_t)(focm.duty_w * pwm_period));
 
-    if (electrical_speed < target_speed) {
-        electrical_speed += 10.0f * FOCM_SAMPLE_TIME;
-        if (electrical_speed > target_speed) { electrical_speed = target_speed; }
-    }
-    else if (electrical_speed > target_speed) {
-        electrical_speed -= 10.0f * FOCM_SAMPLE_TIME;
-        if (electrical_speed < target_speed) { electrical_speed = target_speed; }
-    }
+//    if (electrical_speed < target_speed) {
+//        electrical_speed += 10.0f * FOCM_SAMPLE_TIME;
+//        if (electrical_speed > target_speed) { electrical_speed = target_speed; }
+//    }
+//    else if (electrical_speed > target_speed) {
+//        electrical_speed -= 10.0f * FOCM_SAMPLE_TIME;
+//        if (electrical_speed < target_speed) { electrical_speed = target_speed; }
+//    }
 
-    /* electrical_speed is mechanical rad/s; integrate electrical angle in degrees. */
-    focm.theta += electrical_speed * FOCM_POLE_PAIRS * FOCM_SAMPLE_TIME * FOCM_RAD_TO_DEG;
-    if (focm.theta >= FOCM_ANGLE_PERIOD) { focm.theta -= FOCM_ANGLE_PERIOD; }
-    if (focm.theta < 0.0f) { focm.theta += FOCM_ANGLE_PERIOD; }
+//    /* electrical_speed is mechanical rad/s; integrate electrical angle in degrees. */
+//    focm.theta += electrical_speed * FOCM_POLE_PAIRS * FOCM_SAMPLE_TIME * FOCM_RAD_TO_DEG;
+//    if (focm.theta >= FOCM_ANGLE_PERIOD) { focm.theta -= FOCM_ANGLE_PERIOD; }
+//    if (focm.theta < 0.0f) { focm.theta += FOCM_ANGLE_PERIOD; }
 }
 
 /** 获取当前FOC状态数据。 */

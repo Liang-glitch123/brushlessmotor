@@ -93,10 +93,18 @@ int main(void)
   MX_GPIO_Init();
   MX_DMA_Init();
   MX_ADC1_Init();
+  MX_ADC2_Init();
   MX_TIM1_Init();
   MX_TIM3_Init();
-  HAL_TIM_Base_Start_IT(&htim1);
   /* USER CODE BEGIN 2 */
+  focm_init();
+  ADC_Init();
+  /* Arm CC4 before the update interrupt.  The ADC callback gates FOC until
+     the first timer-triggered injected sample has completed. */
+  if (HAL_TIM_OC_Start(&htim1, TIM_CHANNEL_4) != HAL_OK)
+  {
+    Error_Handler();
+  }
   if (HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1) != HAL_OK)
   {
     Error_Handler();
@@ -109,9 +117,10 @@ int main(void)
   {
     Error_Handler();
   }
-  ADC_Init();
-  focm_init();
-
+  if (HAL_TIM_Base_Start_IT(&htim1) != HAL_OK)
+  {
+    Error_Handler();
+  }
   /* USER CODE END 2 */
 
   /* Infinite loop */

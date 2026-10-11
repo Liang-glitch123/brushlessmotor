@@ -22,6 +22,8 @@
 
 /* USER CODE BEGIN 0 */
 
+#define TIM1_ADC_TRIGGER_COUNT  2800U
+
 /* USER CODE END 0 */
 
 TIM_HandleTypeDef htim1;
@@ -90,6 +92,7 @@ void MX_TIM1_Init(void)
   {
     Error_Handler();
   }
+
   sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
   sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
   sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
@@ -102,6 +105,14 @@ void MX_TIM1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN TIM1_Init 2 */
+
+  /* Internal compare event at the center of the 15 kHz PWM period. */
+  sConfigOC.OCMode = TIM_OCMODE_TIMING;
+  sConfigOC.Pulse = TIM1_ADC_TRIGGER_COUNT;
+  if (HAL_TIM_OC_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_4) != HAL_OK)
+  {
+    Error_Handler();
+  }
 
   /* USER CODE END TIM1_Init 2 */
   HAL_TIM_MspPostInit(&htim1);
