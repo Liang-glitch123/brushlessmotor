@@ -263,17 +263,20 @@ float get_vbus_val(void)
 
 float get_emf_u_val(void)
 {
-  return GET_ADC_VDC_VAL(emf_u_adc_mean);
+  float vdc = GET_ADC_VDC_VAL(emf_u_adc_mean);      // 获取电压值
+  return GET_VBUS_VAL(vdc);
 }
 
 float get_emf_v_val(void)
 {
-  return GET_ADC_VDC_VAL(emf_v_adc_mean);
+  float vdc = GET_ADC_VDC_VAL(emf_v_adc_mean);      // 获取电压值
+  return GET_VBUS_VAL(vdc);
 }
 
 float get_emf_w_val(void)
 {
-  return GET_ADC_VDC_VAL(emf_w_adc_mean);
+  float vdc = GET_ADC_VDC_VAL(emf_w_adc_mean);      // 获取电压值
+  return GET_VBUS_VAL(vdc);
 }
 
 uint8_t flag = 0;
