@@ -5,14 +5,19 @@
 #define PWM_PERIOD_COUNT (5600U)
 #define PWM_MAX_PERIOD_COUNT (PWM_PERIOD_COUNT - 100U)
 
+#define PI 3.14159265358979323846f
+
 typedef struct { 
 	float ia,ib,ic;
 	float id,iq;
 	float id_ref,iq_ref;
 	volatile float theta; /* electrical angle in degrees, [0, 360) */
+	volatile float theta_rad;
+	float omega_ref;
 	float udc;
 	float duty_u,duty_v,duty_w; 
 	uint8_t enabled; 
+	uint8_t dir;
 } focm_data_t;
 
 /** 初始化FOC控制模块。 */

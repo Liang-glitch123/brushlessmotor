@@ -7,7 +7,7 @@
 #define FOCM_PI_KI       (1282.8f)
 #define FOCM_VOLTAGE_MAX (2.0f)
 
-#define FOCM_SAMPLE_TIME (0.0000667f)       	// 控制周期 Ts = 66.7 us
+#define FOCM_SAMPLE_TIME (0.0000667f)          // Control period Ts = 100 us
 #define FOCM_SQRT3_HALF  (0.8660254f)       	// √3/2
 #define FOCM_INV_SQRT3   (0.577350269f)     	// 1/√3 = √3/3
 #define FOCM_POLE_PAIRS  (4.0f)             	// 电机极对数 p = 4
@@ -20,6 +20,11 @@
 
 #define FOCM_IQ_STEP    (2.0f * FOCM_SAMPLE_TIME)
 
+#define Kvf        0.00575f    // 压频系数
+float Vq_offset = 1.1f;        // 低速抬压，先给1V，后面实测调整
+float vd;
+float vq;
+
 typedef struct { 
 	float alpha;
 	float beta; 
@@ -30,7 +35,7 @@ typedef struct {
 	float q; 
 } focm_dq_t;
 
-focm_data_t focm;
+focm_data_t focm = {.dir = 1,};
 
 static float d_integral;
 static float q_integral;
@@ -223,13 +228,20 @@ void focm_hall_update(uint8_t hall_state)
 /** 设置机械角速度给定值。 */
 void set_focm_speed(float speed)
 {
-    target_speed = speed;
+    focm.omega_ref = speed;
 }
 
 /** 反转目标机械速度方向。 */
 void focm_reverse(void)
 {
-    target_speed = -target_speed;
+	if(focm.dir == 1)
+	{
+    focm.dir = 0;
+	}
+	else
+	{
+		focm.dir = 1;
+	}
 }
 
 /** 使能驱动器并启动TIM1三相互补PWM。 */
@@ -275,11 +287,6 @@ void set_focm_disable(void)
  *   theta[k+1] = wrap360(theta[k] + omega_m[k+1]*p*Ts*180/pi)
  * 其中 p 为极对数；omega_m 和 electrical_speed 均按机械角速度（rad/s）处理。
  */
-
-    float vd;
-    float vq;
-    float theta_rad;
-float angleChange = 0;
 void focm_control_step(float ia, float ib, float ic, float udc)
 {
     float sin_theta;
@@ -288,44 +295,32 @@ void focm_control_step(float ia, float ib, float ic, float udc)
     float phase_v;
     float phase_w;
     uint32_t pwm_period;
-    focm_alpha_beta_t current_alpha_beta;
     focm_alpha_beta_t voltage_alpha_beta;
-    focm_dq_t current_dq;
     focm_dq_t voltage_dq;
-
-    focm.ia = ia;
-    focm.ib = ib;
-    focm.ic = ic;
     focm.udc = udc;
     if (!focm.enabled || udc < 5.0f) { return; }
 
     /* focm.theta is stored in degrees; the C trigonometric functions use radians. */
-		focm.theta += angleChange;
-		if(focm.theta >= 360.0f)
+		if(focm.dir != 0)
 		{
-			focm.theta = 0.0f;
+			focm.theta_rad += focm.omega_ref * FOCM_SAMPLE_TIME;
 		}
-    theta_rad = focm.theta * FOCM_DEG_TO_RAD;
-    sin_theta = sinf(theta_rad);
-    cos_theta = cosf(theta_rad);
-    current_alpha_beta = focm_clarke(ia, ib, ic);
-    current_dq = focm_park(current_alpha_beta, sin_theta, cos_theta);
-    focm.id = current_dq.d;
-    focm.iq = current_dq.q;
-
-    if (iq_command < focm.iq_ref) {
-        iq_command += FOCM_IQ_STEP;
-        if (iq_command > focm.iq_ref) { iq_command = focm.iq_ref; }
-    }
-    else if (iq_command > focm.iq_ref) {
-        iq_command -= FOCM_IQ_STEP;
-        if (iq_command < focm.iq_ref) { iq_command = focm.iq_ref; }
-    }
-
-//    vd = focm_limit(FOCM_PI_KP * (focm.id_ref - focm.id) + d_integral, -FOCM_VOLTAGE_MAX, FOCM_VOLTAGE_MAX);
-//    vq = focm_limit(FOCM_PI_KP * (iq_command - focm.iq) + q_integral, -FOCM_VOLTAGE_MAX, FOCM_VOLTAGE_MAX);
-//    d_integral = focm_limit(d_integral + FOCM_PI_KI * (focm.id_ref - focm.id) * FOCM_SAMPLE_TIME, -FOCM_VOLTAGE_MAX, FOCM_VOLTAGE_MAX);
-//    q_integral = focm_limit(q_integral + FOCM_PI_KI * (iq_command - focm.iq) * FOCM_SAMPLE_TIME, -FOCM_VOLTAGE_MAX, FOCM_VOLTAGE_MAX);
+		else
+		{
+			focm.theta_rad -= focm.omega_ref * FOCM_SAMPLE_TIME;
+		}
+		if(focm.theta_rad > (2.0f * PI))
+		{
+			focm.theta_rad -= 2.0f * PI;
+		}
+		else if(focm.theta_rad <= (0.0f * PI))
+		{
+			focm.theta_rad += 2.0f * PI;
+		}
+		focm.theta = focm.theta_rad * FOCM_RAD_TO_DEG;
+    sin_theta = sinf(focm.theta_rad);
+    cos_theta = cosf(focm.theta_rad);
+		vq = Kvf * focm.omega_ref + Vq_offset * (focm.omega_ref / 300);
 
     voltage_dq.d = vd;
     voltage_dq.q = vq;
@@ -337,20 +332,6 @@ void focm_control_step(float ia, float ib, float ic, float udc)
     __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, (uint32_t)(focm.duty_u * pwm_period));
     __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, (uint32_t)(focm.duty_v * pwm_period));
     __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, (uint32_t)(focm.duty_w * pwm_period));
-
-//    if (electrical_speed < target_speed) {
-//        electrical_speed += 10.0f * FOCM_SAMPLE_TIME;
-//        if (electrical_speed > target_speed) { electrical_speed = target_speed; }
-//    }
-//    else if (electrical_speed > target_speed) {
-//        electrical_speed -= 10.0f * FOCM_SAMPLE_TIME;
-//        if (electrical_speed < target_speed) { electrical_speed = target_speed; }
-//    }
-
-//    /* electrical_speed is mechanical rad/s; integrate electrical angle in degrees. */
-//    focm.theta += electrical_speed * FOCM_POLE_PAIRS * FOCM_SAMPLE_TIME * FOCM_RAD_TO_DEG;
-//    if (focm.theta >= FOCM_ANGLE_PERIOD) { focm.theta -= FOCM_ANGLE_PERIOD; }
-//    if (focm.theta < 0.0f) { focm.theta += FOCM_ANGLE_PERIOD; }
 }
 
 /** 获取当前FOC状态数据。 */

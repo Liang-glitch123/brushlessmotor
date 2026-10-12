@@ -14,7 +14,7 @@
 /* Current-sense calibration for the fitted amplifier and shunt. */
 #define GET_ADC_CURR(val)               ((((float)(val) * 3.3f / 4096.0f) - 1.24f) / 8.0f / 0.02f * 1000.0f)
 #define ADC_RAW_TO_VOLT(val)            ((float)(val) * VREF / 4096.0f)
-#define GET_VBUS_VAL(val)               (ADC_RAW_TO_VOLT(val) * 37.0f)
+#define GET_VBUS_VAL(val)               ((ADC_RAW_TO_VOLT(val) - 1.24f) * 37.0f)
 #define GET_EMF_VAL(val)                ((ADC_RAW_TO_VOLT(val) - EMF_OUTPUT_OFFSET) / EMF_ISOLATION_GAIN)
 
 extern ADC_HandleTypeDef hadc1;
