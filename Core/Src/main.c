@@ -76,7 +76,7 @@ int main(void)
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-   HAL_Init();
+  HAL_Init();
 
   /* USER CODE BEGIN Init */
 
@@ -99,9 +99,9 @@ int main(void)
   /* USER CODE BEGIN 2 */
   focm_init();
   ADC_Init();
-  /* Arm CC4 before the update interrupt.  The ADC callback gates FOC until
-     the first timer-triggered injected sample has completed. */
-  if (HAL_TIM_OC_Start(&htim1, TIM_CHANNEL_4) != HAL_OK)
+  /* Arm CC4 before the update interrupt.  The ADC frame gate in the timer
+     callback keeps FOC stopped until the first injected sample is complete. */
+  if (HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4) != HAL_OK)
   {
     Error_Handler();
   }
@@ -121,6 +121,7 @@ int main(void)
   {
     Error_Handler();
   }
+	__HAL_TIM_ENABLE_IT(&htim1, TIM_IT_UPDATE);
   /* USER CODE END 2 */
 
   /* Infinite loop */

@@ -6,6 +6,7 @@
 #define ADC_REGULAR_CHANNEL_COUNT       2U
 #define ADC_REGULAR_FRAME_COUNT         32U
 #define ADC_NUM_MAX                     (ADC_REGULAR_CHANNEL_COUNT * ADC_REGULAR_FRAME_COUNT)
+#define ADC_INJECTED_CHANNEL_COUNT      3U
 
 #define VREF                            3.3f
 #define EMF_OUTPUT_OFFSET               1.24f
@@ -22,8 +23,15 @@ extern uint8_t flag;
 extern volatile int32_t current_u;
 extern volatile int32_t current_v;
 extern volatile int32_t current_w;
+extern volatile uint32_t tim1_update_count;
+extern volatile uint32_t tim1_cc4_event_count;
+extern volatile uint32_t adc1_injected_complete_count;
+extern volatile uint32_t adc2_injected_complete_count;
+extern volatile uint16_t adc_current_raw[ADC_INJECTED_CHANNEL_COUNT];
+extern volatile uint16_t adc_phase_voltage_raw[ADC_INJECTED_CHANNEL_COUNT];
 
 void ADC_Init(void);
+void capture_injected_samples(void);
 void adc_process(void);
 int32_t get_curr_val_u(void);
 int32_t get_curr_val_v(void);

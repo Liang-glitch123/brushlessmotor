@@ -21,7 +21,7 @@
 #define FOCM_IQ_STEP    (2.0f * FOCM_SAMPLE_TIME)
 
 #define Kvf        0.00575f    // 压频系数
-float Vq_offset = 1.1f;        // 低速抬压，先给1V，后面实测调整
+float Vq_offset = 1.3f;        // 低速抬压，先给1V，后面实测调整
 float vd;
 float vq;
 
@@ -296,7 +296,9 @@ void focm_control_step(float ia, float ib, float ic, float udc)
     float phase_w;
     uint32_t pwm_period;
     focm_alpha_beta_t voltage_alpha_beta;
+		focm_alpha_beta_t current_alpha_beta;
     focm_dq_t voltage_dq;
+		focm_dq_t current_dq;
     focm.udc = udc;
     if (!focm.enabled || udc < 5.0f) { return; }
 
@@ -318,8 +320,12 @@ void focm_control_step(float ia, float ib, float ic, float udc)
 			focm.theta_rad += 2.0f * PI;
 		}
 		focm.theta = focm.theta_rad * FOCM_RAD_TO_DEG;
-    sin_theta = sinf(focm.theta_rad);
-    cos_theta = cosf(focm.theta_rad);
+		sin_theta = sinf(focm.theta_rad);
+		cos_theta = cosf(focm.theta_rad);
+		current_alpha_beta = focm_clarke(ia, ib, ic);
+		current_dq = focm_park(current_alpha_beta, sin_theta, cos_theta);
+		focm.id = current_dq.d;
+		focm.iq = current_dq.q;
 		vq = Kvf * focm.omega_ref + Vq_offset * (focm.omega_ref / 300);
 
     voltage_dq.d = vd;
